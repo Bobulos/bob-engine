@@ -1,20 +1,19 @@
 use crate::b_engine;
+use crate::b_engine::Input;
+use crate::b_engine::asset_management::Asset;
 use crate::b_engine::entities;
+use crate::b_engine::entities::DynamicWorld;
 use crate::b_engine::entities::SystemGroup;
 use crate::b_engine::entities::entities::Entities;
 use crate::b_engine::entities::system_group::SystemGroupThreading;
 use crate::coords::Float2;
 use crate::core_systems;
+use crate::rendering::Instance;
 use crate::rendering::Renderer;
 use std::sync::RwLock;
 use std::time::Duration;
 use std::time::Instant;
 use std::{sync::Arc, vec};
-
-use crate::b_engine::Input;
-use crate::b_engine::asset_management::Asset;
-use crate::b_engine::entities::DynamicWorld;
-use crate::rendering::Instance;
 pub struct Engine {
     pub renderer: Arc<RwLock<Renderer>>,
     pub input: Input,
@@ -74,6 +73,7 @@ impl Engine {
                 };
                 1
             ],
+            crate::rendering::renderer::PipelineKey::Default,
         );
     }
 
@@ -167,18 +167,23 @@ impl Engine {
             RENDER_GROUP,
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
         );
-
+        // Render system
         let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
-        let _rendering_system = group.register_system(Box::new(
-            core_systems::render_system::RenderSystem::new(Arc::clone(&self.renderer)),
-        ));
-        let atlasses = [""; core_systems::sprite_batch_allocator_system::MAX_ATLASES];
-        let _rendering_system = group.register_system(Box::new(
-            core_systems::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
-                Arc::clone(&self.renderer),
-                INCLUDE_ATLAS.to_vec(),
+        let _rendering_system = group.register_system(
+            Box::new(core_systems::render_system::RenderSystem::new(Arc::clone(
+                &self.renderer,
+            ))),
+            i32::MIN + 1,
+        );
+        let _rendering_system = group.register_system(
+            Box::new(
+                core_systems::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
+                    Arc::clone(&self.renderer),
+                    INCLUDE_ATLAS.to_vec(),
+                ),
             ),
-        ));
+            i32::MIN,
+        );
 
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
         self.entities.add_system_group(
@@ -186,7 +191,7 @@ impl Engine {
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
         );
         let group = self.entities.get_system_group_mut("test_group").unwrap();
-        group.register_system(Box::new(core_systems::test_system::TestSystem::new()));
+        group.register_system(Box::new(core_systems::test_system::TestSystem::new()), 0);
         // initialize them jhons
         self.entities.start_system_groups();
     }

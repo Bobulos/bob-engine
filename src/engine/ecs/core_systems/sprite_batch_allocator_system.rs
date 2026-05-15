@@ -44,6 +44,7 @@ impl SpriteBatchAllocatorSystem {
                         };
                         b_engine::engine::SPRITE_BATCH_SIZE
                     ],
+                    crate::rendering::renderer::PipelineKey::Default,
                 );
             } else {
                 println!("Couldn't find asset name of {:}", asset_name);
