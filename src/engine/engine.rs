@@ -6,8 +6,8 @@ use crate::b_engine::entities::DynamicWorld;
 use crate::b_engine::entities::SystemGroup;
 use crate::b_engine::entities::entities::Entities;
 use crate::b_engine::entities::system_group::SystemGroupThreading;
-use crate::coords::Float2;
 use crate::core_systems;
+use crate::float2::Float2;
 use crate::rendering::Instance;
 use crate::rendering::Renderer;
 use std::sync::RwLock;
@@ -56,25 +56,8 @@ impl Engine {
     }
 
     fn setup_renderer(&mut self) {
-        self.setup_background();
         self.setup_sprites();
         self.setup_tilemap();
-    }
-
-    fn setup_background(&mut self) {
-        self.renderer.write().unwrap().create_batch(
-            include_bytes!("../../assets/space.jpg"),
-            vec![
-                Instance {
-                    position: [0.0, 0.0],
-                    size: [0.0, 0.0],
-                    uv_offset: [0.0, 0.0],
-                    uv_scale: [1.0, 1.0],
-                };
-                1
-            ],
-            crate::rendering::renderer::PipelineKey::Default,
-        );
     }
 
     fn setup_sprites(&mut self) {

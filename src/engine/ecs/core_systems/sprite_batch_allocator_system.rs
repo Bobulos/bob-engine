@@ -37,7 +37,7 @@ impl SpriteBatchAllocatorSystem {
                     bytes,
                     vec![
                         Instance {
-                            position: [10000.0, 100000.0],
+                            position: [f32::MAX, f32::MAX],
                             size: [1.0, 1.0],
                             uv_scale: [1.0, 1.0],
                             uv_offset: [0.0, 0.0],
