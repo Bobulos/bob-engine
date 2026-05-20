@@ -20,12 +20,16 @@ impl TestSystem {
 const GRAVITY: f32 = 9.8;
 const ENTITY_COUNT: usize = 10000;
 impl SystemBase for TestSystem {
-    fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
+    fn on_start(&mut self, world: &Arc<DynamicWorld>) {}
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
-        // colections
-        let mut consumed = 0;
-        for _ in 0..10 {
+        for _ in 0..20 {
             self.spawned += 1;
+            let spawned = self.spawned as f32 * 0.01;
+            let position = Float2 {
+                x: spawned * f32::sin(spawned),
+                y: spawned * f32::cos(spawned),
+            };
+
             let e = world.spawn();
             world.insert(
                 e,
@@ -39,34 +43,16 @@ impl SystemBase for TestSystem {
                 },
             );
 
-            world.insert(
-                e,
-                core_components::Transform {
-                    position: Float2::new(self.spawned as f32, self.spawned as f32),
-                },
-            );
+            world.insert(e, core_components::Transform { position });
         }
 
-        //let mut targets: [Float2; ENTITY_COUNT] = [Float2::ZERO; ENTITY_COUNT];
-        //let mut targets: Vec<Float2> = Vec::new();
-        self.targets.clear();
+        const SPEED: f32 = 0.01;
         world.for_each_mut::<Transform>(|entity: Entity, transform: &mut Transform| {
-            self.targets.push(transform.position);
-            consumed += 1;
-        });
-        const FORCE: f32 = 0.001;
-        world.for_each_mut::<Transform>(|oponents: Entity, transform: &mut Transform| {
-            let mut avg = Float2::ZERO;
-            for i in 0..consumed {
-                let dif = (transform.position - self.targets[i]);
-                let lngth = dif.length();
-                if (lngth > 0.0) {
-                    avg += dif / lngth;
-                }
-            }
-            avg.normalize();
-            transform.position += avg * b_engine::engine::FIXED_DT * FORCE;
+            let dir = Float2::ZERO - transform.position;
+            dir.normalize();
+            transform.position += dir * SPEED;
         });
     }
+
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
 }
