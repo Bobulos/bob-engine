@@ -16,7 +16,7 @@ use std::time::Instant;
 pub struct Engine {
     pub frame_count: u64,
     pub renderer: Arc<RwLock<Renderer>>,
-    pub input: Arc<Input>,
+    pub input: Arc<RwLock<Input>>,
     pub entities: Entities,
 }
 
@@ -32,7 +32,7 @@ impl Engine {
         Self {
             frame_count: 0,
             renderer: Arc::new(RwLock::new(renderer)),
-            input: Input::new(),
+            input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
         }
     }
@@ -207,7 +207,9 @@ impl Engine {
     }
     const CAMERA_SPEED: f32 = 0.1;
     pub fn player_loop(&mut self) {
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        let input = self.input.read().unwrap();
+
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowLeft,
         )) {
             self.renderer
@@ -216,7 +218,7 @@ impl Engine {
                 .camera
                 .move_by(-Self::CAMERA_SPEED, 0.0);
         }
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowRight,
         )) {
             self.renderer
@@ -225,7 +227,7 @@ impl Engine {
                 .camera
                 .move_by(Self::CAMERA_SPEED, 0.0);
         }
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowUp,
         )) {
             self.renderer
@@ -234,7 +236,7 @@ impl Engine {
                 .camera
                 .move_by(0.0, Self::CAMERA_SPEED);
         }
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowDown,
         )) {
             self.renderer
@@ -243,13 +245,13 @@ impl Engine {
                 .camera
                 .move_by(0.0, -Self::CAMERA_SPEED);
         }
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::Digit1,
         )) {
             self.renderer.write().unwrap().camera.zoom_by(1.01);
             self.renderer.write().unwrap().update_camera();
         }
-        if self.input.get_key_down(winit::keyboard::PhysicalKey::Code(
+        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::Digit2,
         )) {
             self.renderer.write().unwrap().camera.zoom_by(0.99);
@@ -261,7 +263,7 @@ impl Engine {
 
         self.player_loop();
         // FLUSH AT END
-        self.input.flush(); // Clear per-frame input state at the start of the frame
+        self.input.write().unwrap().flush(); // Clear per-frame input state at the start of the frame
     }
     pub fn render(&mut self) -> Result<(), String> {
         self.renderer

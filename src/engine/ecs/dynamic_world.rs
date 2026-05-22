@@ -14,6 +14,73 @@ pub struct DynamicWorld {
     entities_count: RwLock<usize>,
 }
 
+macro_rules! impl_for_each {
+    ($name:ident, $($t:ident => $var:ident),+) => {
+        pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&$t),*))
+        where
+            $($t: Any + Send + Sync + 'static),*
+        {
+            let count = *self.entities_count.read().unwrap();
+            let alive = self.alive.read().unwrap();
+
+            $(
+                let $var = match self.storage_arc::<$t>() {
+                    Some(a) => a,
+                    None => return,
+                };
+                let $var = $var.read().unwrap();
+                let $var = $var.downcast_ref::<ComponentStore<$t>>().unwrap();
+            )+
+
+            for id in 0..count {
+                if !alive.get(id).copied().unwrap_or(false) {
+                    continue;
+                }
+                if let ($( Some($var) ),+) = ($( $var.get(id) ),+) {
+                    f(Entity(id), $($var),*);
+                }
+            }
+        }
+    };
+}
+macro_rules! impl_for_each_mut {
+    ($name:ident, $($t:ident => $var:ident),+) => {
+        pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&mut $t),*))
+        where
+            $($t: Any + Send + Sync + 'static),*
+        {
+            let mut types = std::collections::HashSet::new();
+            $(
+                assert!(
+                    types.insert(std::any::TypeId::of::<$t>()),
+                    "All component types in a mutable query must be distinct!"
+                );
+            )+
+
+            let count = *self.entities_count.read().unwrap();
+            let alive = self.alive.read().unwrap();
+
+            $(
+                let $var = match self.storage_arc::<$t>() {
+                    Some(a) => a,
+                    None => return,
+                };
+                let mut $var = $var.write().unwrap();
+                let $var = $var.downcast_mut::<ComponentStore<$t>>().unwrap();
+            )+
+
+            for id in 0..count {
+                if !alive.get(id).copied().unwrap_or(false) {
+                    continue;
+                }
+                if let ($( Some($var) ),+) = ($( $var.get_mut(id) ),+) {
+                    f(Entity(id), $($var),*);
+                }
+            }
+        }
+    };
+}
+
 impl DynamicWorld {
     pub fn new() -> Self {
         Self {
@@ -116,94 +183,7 @@ impl DynamicWorld {
             .unwrap_or(false)
     }
 
-    // ── Closure-based queries (immutable) ─────────────────────────────────────
-
-    pub fn for_each<A>(&self, mut f: impl FnMut(Entity, &A))
-    where
-        A: Any + Send + Sync + 'static,
-    {
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-        self.with_storage::<A, _>(|sa| {
-            for id in 0..count {
-                if !alive.get(id).copied().unwrap_or(false) {
-                    continue;
-                }
-                if let Some(a) = sa.get(id) {
-                    f(Entity(id), a);
-                }
-            }
-        });
-    }
-
-    pub fn for_each2<A, B>(&self, mut f: impl FnMut(Entity, &A, &B))
-    where
-        A: Any + Send + Sync + 'static,
-        B: Any + Send + Sync + 'static,
-    {
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-
-        let arc_a = match self.storage_arc::<A>() {
-            Some(a) => a,
-            None => return,
-        };
-        let arc_b = match self.storage_arc::<B>() {
-            Some(b) => b,
-            None => return,
-        };
-        let guard_a = arc_a.read().unwrap();
-        let guard_b = arc_b.read().unwrap();
-        let sa = guard_a.downcast_ref::<ComponentStore<A>>().unwrap();
-        let sb = guard_b.downcast_ref::<ComponentStore<B>>().unwrap();
-
-        for id in 0..count {
-            if !alive.get(id).copied().unwrap_or(false) {
-                continue;
-            }
-            if let (Some(a), Some(b)) = (sa.get(id), sb.get(id)) {
-                f(Entity(id), a, b);
-            }
-        }
-    }
-
-    pub fn for_each3<A, B, C>(&self, mut f: impl FnMut(Entity, &A, &B, &C))
-    where
-        A: Any + Send + Sync + 'static,
-        B: Any + Send + Sync + 'static,
-        C: Any + Send + Sync + 'static,
-    {
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-
-        let arc_a = match self.storage_arc::<A>() {
-            Some(a) => a,
-            None => return,
-        };
-        let arc_b = match self.storage_arc::<B>() {
-            Some(b) => b,
-            None => return,
-        };
-        let arc_c = match self.storage_arc::<C>() {
-            Some(c) => c,
-            None => return,
-        };
-        let guard_a = arc_a.read().unwrap();
-        let guard_b = arc_b.read().unwrap();
-        let guard_c = arc_c.read().unwrap();
-        let sa = guard_a.downcast_ref::<ComponentStore<A>>().unwrap();
-        let sb = guard_b.downcast_ref::<ComponentStore<B>>().unwrap();
-        let sc = guard_c.downcast_ref::<ComponentStore<C>>().unwrap();
-
-        for id in 0..count {
-            if !alive.get(id).copied().unwrap_or(false) {
-                continue;
-            }
-            if let (Some(a), Some(b), Some(c)) = (sa.get(id), sb.get(id), sc.get(id)) {
-                f(Entity(id), a, b, c);
-            }
-        }
-    }
+    // ── Optional Component Query ──────────────────────────────────────────────
 
     pub fn for_each_optional<A, B>(&self, mut f: impl FnMut(Entity, &A, Option<&B>))
     where
@@ -220,7 +200,6 @@ impl DynamicWorld {
         let guard_a = arc_a.read().unwrap();
         let sa = guard_a.downcast_ref::<ComponentStore<A>>().unwrap();
 
-        // B is optional — don't bail if missing, just pass None
         let arc_b = self.storage_arc::<B>();
         let guard_b = arc_b.as_ref().map(|a| a.read().unwrap());
         let sb = guard_b
@@ -237,11 +216,34 @@ impl DynamicWorld {
         }
     }
 
-    // ── Closure-based queries (mutable) ───────────────────────────────────────
+    // ── Filtered variants ─────────────────────────────────────────────────────
 
-    pub fn for_each_mut<A>(&self, mut f: impl FnMut(Entity, &mut A))
+    pub fn for_each_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &A))
     where
         A: Any + Send + Sync + 'static,
+        F: QueryFilter,
+    {
+        let count = *self.entities_count.read().unwrap();
+        let alive = self.alive.read().unwrap();
+        self.with_storage::<A, _>(|sa| {
+            for id in 0..count {
+                if !alive.get(id).copied().unwrap_or(false) {
+                    continue;
+                }
+                if !filter.matches(id, self) {
+                    continue;
+                }
+                if let Some(a) = sa.get(id) {
+                    f(Entity(id), a);
+                }
+            }
+        });
+    }
+
+    pub fn for_each_mut_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &mut A))
+    where
+        A: Any + Send + Sync + 'static,
+        F: QueryFilter,
     {
         let count = *self.entities_count.read().unwrap();
         let alive = self.alive.read().unwrap();
@@ -257,11 +259,39 @@ impl DynamicWorld {
             if !alive.get(id).copied().unwrap_or(false) {
                 continue;
             }
+            if !filter.matches(id, self) {
+                continue;
+            }
             if let Some(a) = sa.get_mut(id) {
                 f(Entity(id), a);
             }
         }
     }
+
+    impl_for_each!(for_each,  A => arc_a);
+    impl_for_each!(for_each2, A => arc_a, B => arc_b);
+    impl_for_each!(for_each3, A => arc_a, B => arc_b, C => arc_c);
+    impl_for_each!(for_each4, A => arc_a, B => arc_b, C => arc_c, D => arc_d);
+    impl_for_each!(for_each5, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e);
+    impl_for_each!(for_each6, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f);
+    impl_for_each!(for_each7, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g);
+    impl_for_each!(for_each8, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h);
+    impl_for_each!(for_each9, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h, I => arc_i);
+    impl_for_each!(for_each10, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h, I => arc_i, J => arc_j);
+
+    impl_for_each_mut!(for_each_mut,      A => arc_a);
+    impl_for_each_mut!(for_each2_mut_both, A => arc_a, B => arc_b);
+    impl_for_each_mut!(for_each3_mut_all,  A => arc_a, B => arc_b, C => arc_c);
+    impl_for_each_mut!(for_each4_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d);
+    impl_for_each_mut!(for_each5_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e);
+    impl_for_each_mut!(for_each6_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f);
+    impl_for_each_mut!(for_each7_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g);
+    impl_for_each_mut!(for_each8_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h);
+    impl_for_each_mut!(for_each9_mut_all,  A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h, I => arc_i);
+    impl_for_each_mut!(for_each10_mut_all, A => arc_a, B => arc_b, C => arc_c, D => arc_d, E => arc_e, F => arc_f, G => arc_g, H => arc_h, I => arc_i, J => arc_j);
+
+    // ── Hybrid Mutable/Immutable Variations ───────────────────────────────────
+    // Kept explicit for specific use cases like your original `for_each2_mut` and `for_each3_mut`
 
     /// A mutable, B immutable.
     pub fn for_each2_mut<A, B>(&self, mut f: impl FnMut(Entity, &mut A, &B))
@@ -274,7 +304,6 @@ impl DynamicWorld {
             TypeId::of::<B>(),
             "A and B must be different types"
         );
-
         let count = *self.entities_count.read().unwrap();
         let alive = self.alive.read().unwrap();
 
@@ -296,44 +325,6 @@ impl DynamicWorld {
                 continue;
             }
             if let (Some(a), Some(b)) = (sa.get_mut(id), sb.get(id)) {
-                f(Entity(id), a, b);
-            }
-        }
-    }
-
-    /// A and B both mutable.
-    pub fn for_each2_mut_both<A, B>(&self, mut f: impl FnMut(Entity, &mut A, &mut B))
-    where
-        A: Any + Send + Sync + 'static,
-        B: Any + Send + Sync + 'static,
-    {
-        assert_ne!(
-            TypeId::of::<A>(),
-            TypeId::of::<B>(),
-            "A and B must be different types"
-        );
-
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-
-        let arc_a = match self.storage_arc::<A>() {
-            Some(a) => a,
-            None => return,
-        };
-        let arc_b = match self.storage_arc::<B>() {
-            Some(b) => b,
-            None => return,
-        };
-        let mut guard_a = arc_a.write().unwrap();
-        let mut guard_b = arc_b.write().unwrap();
-        let sa = guard_a.downcast_mut::<ComponentStore<A>>().unwrap();
-        let sb = guard_b.downcast_mut::<ComponentStore<B>>().unwrap();
-
-        for id in 0..count {
-            if !alive.get(id).copied().unwrap_or(false) {
-                continue;
-            }
-            if let (Some(a), Some(b)) = (sa.get_mut(id), sb.get_mut(id)) {
                 f(Entity(id), a, b);
             }
         }
@@ -390,58 +381,6 @@ impl DynamicWorld {
             }
             if let (Some(a), Some(b), Some(c)) = (sa.get_mut(id), sb.get_mut(id), sc.get(id)) {
                 f(Entity(id), a, b, c);
-            }
-        }
-    }
-
-    // ── Filtered variants ─────────────────────────────────────────────────────
-
-    pub fn for_each_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &A))
-    where
-        A: Any + Send + Sync + 'static,
-        F: QueryFilter,
-    {
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-        self.with_storage::<A, _>(|sa| {
-            for id in 0..count {
-                if !alive.get(id).copied().unwrap_or(false) {
-                    continue;
-                }
-                if !filter.matches(id, self) {
-                    continue;
-                }
-                if let Some(a) = sa.get(id) {
-                    f(Entity(id), a);
-                }
-            }
-        });
-    }
-
-    pub fn for_each_mut_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &mut A))
-    where
-        A: Any + Send + Sync + 'static,
-        F: QueryFilter,
-    {
-        let count = *self.entities_count.read().unwrap();
-        let alive = self.alive.read().unwrap();
-
-        let arc_a = match self.storage_arc::<A>() {
-            Some(a) => a,
-            None => return,
-        };
-        let mut guard_a = arc_a.write().unwrap();
-        let sa = guard_a.downcast_mut::<ComponentStore<A>>().unwrap();
-
-        for id in 0..count {
-            if !alive.get(id).copied().unwrap_or(false) {
-                continue;
-            }
-            if !filter.matches(id, self) {
-                continue;
-            }
-            if let Some(a) = sa.get_mut(id) {
-                f(Entity(id), a);
             }
         }
     }

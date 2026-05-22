@@ -284,6 +284,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "image",
+ "paste",
  "pollster",
  "rust-embed",
  "wgpu",

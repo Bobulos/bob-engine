@@ -1,7 +1,7 @@
 use crate::b_engine::entities::core_components::Transform;
 use crate::b_engine::entities::{DynamicWorld, Entity, SystemBase};
 use crate::float2::Float2;
-use crate::{b_engine, core_components};
+use crate::core_components;
 use std::sync::Arc;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
@@ -20,7 +20,7 @@ impl TestSystem {
 const GRAVITY: f32 = 9.8;
 const ENTITY_COUNT: usize = 10000;
 impl SystemBase for TestSystem {
-    fn on_start(&mut self, world: &Arc<DynamicWorld>) {}
+    fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         for _ in 0..20 {
             self.spawned += 1;
@@ -47,7 +47,7 @@ impl SystemBase for TestSystem {
         }
 
         const SPEED: f32 = 0.01;
-        world.for_each_mut::<Transform>(|entity: Entity, transform: &mut Transform| {
+        world.for_each_mut::<Transform>(|_entity: Entity, transform: &mut Transform| {
             let dir = Float2::ZERO - transform.position;
             dir.normalize();
             transform.position += dir * SPEED;

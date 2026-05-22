@@ -16,6 +16,7 @@ simd = []
 
 
 [dependencies]
+paste = "1"
 bytemuck = { version = "1", features = ["derive"] }
 winit = "0.30"
 # Use the latest version available (0.17+ as of early 2026)
