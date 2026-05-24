@@ -5,7 +5,6 @@
 /// Build with:   cargo build --release
 /// Run tests:    cargo test
 /// Benchmark:    cargo bench (requires criterion in Cargo.toml)
-
 // ─── Cargo.toml snippet ──────────────────────────────────────────────────────
 // [dependencies]
 // bytemuck = "1"          # optional: safe Pod/Zeroable casts
@@ -14,7 +13,6 @@
 // default = ["simd"]
 // simd = []               # gate to allow opt-out in embedded targets
 // ─────────────────────────────────────────────────────────────────────────────
-
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
@@ -25,7 +23,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 /// A 16-byte aligned pair of `f32` values backed by a 128-bit SIMD lane where
 /// available.  The public API is identical regardless of the backend chosen at
 /// compile time.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 #[repr(C, align(16))]
 pub struct Float2 {
     pub x: f32,
@@ -56,6 +54,17 @@ impl Float2 {
 // ── Core math ────────────────────────────────────────────────────────────────
 
 impl Float2 {
+    /// Cross product with a scalar and a vector.
+    #[inline]
+    pub fn cross_scalar_vec(k: f32, v: Self) -> Self {
+        Self::new(-k * v.y, k * v.x)
+    }
+    /// Rotate the vector by the given angle.
+    #[inline]
+    pub fn rotate(self, angle: f32) -> Self {
+        let (sin, cos) = angle.sin_cos();
+        Self::new(self.x * cos - self.y * sin, self.x * sin + self.y * cos)
+    }
     /// Dot product.
     #[inline]
     pub fn dot(self, rhs: Self) -> f32 {
@@ -264,21 +273,23 @@ unsafe fn dot_sse41(a: Float2, b: Float2) -> f32 {
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
 #[inline]
-unsafe fn normalize_fast_sse(v: Float2) -> Float2 { unsafe {
-    use std::arch::x86_64::*;
-    let vv = _mm_set_ps(0.0, 0.0, v.y, v.x);
-    // dot via multiply + horizontal add (SSE only, no SSE4.1)
-    let sq = _mm_mul_ps(vv, vv);
-    // manually hadd for x+y
-    let hi = _mm_shuffle_ps(sq, sq, 0b_00_00_00_01); // [y,y,y,y] in low lane
-    let sum = _mm_add_ss(sq, hi); // sum.x = x²+y²
-    let rsqrt = _mm_rsqrt_ss(sum); // 1/sqrt estimate
-    let rsqrt = _mm_shuffle_ps(rsqrt, rsqrt, 0); // broadcast
-    let r = _mm_mul_ps(vv, rsqrt);
-    let mut out = [0f32; 4];
-    _mm_storeu_ps(out.as_mut_ptr(), r);
-    Float2::new(out[0], out[1])
-}}
+unsafe fn normalize_fast_sse(v: Float2) -> Float2 {
+    unsafe {
+        use std::arch::x86_64::*;
+        let vv = _mm_set_ps(0.0, 0.0, v.y, v.x);
+        // dot via multiply + horizontal add (SSE only, no SSE4.1)
+        let sq = _mm_mul_ps(vv, vv);
+        // manually hadd for x+y
+        let hi = _mm_shuffle_ps(sq, sq, 0b_00_00_00_01); // [y,y,y,y] in low lane
+        let sum = _mm_add_ss(sq, hi); // sum.x = x²+y²
+        let rsqrt = _mm_rsqrt_ss(sum); // 1/sqrt estimate
+        let rsqrt = _mm_shuffle_ps(rsqrt, rsqrt, 0); // broadcast
+        let r = _mm_mul_ps(vv, rsqrt);
+        let mut out = [0f32; 4];
+        _mm_storeu_ps(out.as_mut_ptr(), r);
+        Float2::new(out[0], out[1])
+    }
+}
 
 // ── SIMD helpers (AArch64 NEON) ──────────────────────────────────────────────
 
@@ -301,7 +312,10 @@ unsafe fn normalize_fast_neon_f32(v: Float2) -> Float2 {
     let sum = vaddv_f32(sq);
     // vrsqrte_f32 gives 1/sqrt estimate; one Newton-Raphson step for accuracy
     let rsqrt_est = vrsqrte_f32(vdup_n_f32(sum));
-    let rsqrt = vmul_f32(rsqrt_est, vrsqrts_f32(vmul_f32(vdup_n_f32(sum), rsqrt_est), rsqrt_est));
+    let rsqrt = vmul_f32(
+        rsqrt_est,
+        vrsqrts_f32(vmul_f32(vdup_n_f32(sum), rsqrt_est), rsqrt_est),
+    );
     let r = vmul_f32(vv, vrsqrte_f32(vdup_n_f32(vaddv_f32(vmul_f32(vv, vv)))));
     let mut out = [0f32; 2];
     vst1_f32(out.as_mut_ptr(), r);
@@ -571,7 +585,6 @@ macro_rules! impl_binop_i2 {
     };
 }
 
-
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
 impl_binop_i2!(Add, add, +, _mm_add_epi32);
 #[cfg(all(target_arch = "x86_64", target_feature = "sse2"))]
@@ -582,25 +595,33 @@ impl_binop_i2!(Sub, sub, -, _mm_sub_epi32);
 impl Add for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn add(self, rhs: Self) -> Self { Self::new(self.x + rhs.x, self.y + rhs.y) }
+    fn add(self, rhs: Self) -> Self {
+        Self::new(self.x + rhs.x, self.y + rhs.y)
+    }
 }
 #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
 impl Add<i32> for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn add(self, rhs: i32) -> Self { Self::new(self.x + rhs, self.y + rhs) }
+    fn add(self, rhs: i32) -> Self {
+        Self::new(self.x + rhs, self.y + rhs)
+    }
 }
 #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
 impl Sub for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn sub(self, rhs: Self) -> Self { Self::new(self.x - rhs.x, self.y - rhs.y) }
+    fn sub(self, rhs: Self) -> Self {
+        Self::new(self.x - rhs.x, self.y - rhs.y)
+    }
 }
 #[cfg(not(all(target_arch = "x86_64", target_feature = "sse2")))]
 impl Sub<i32> for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn sub(self, rhs: i32) -> Self { Self::new(self.x - rhs, self.y - rhs) }
+    fn sub(self, rhs: i32) -> Self {
+        Self::new(self.x - rhs, self.y - rhs)
+    }
 }
 
 // mullo_epi32 requires SSE4.1; fall back to scalar multiply otherwise.
@@ -624,26 +645,62 @@ impl Mul for Int2 {
 impl Mul for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn mul(self, rhs: Self) -> Self { Self::new(self.x * rhs.x, self.y * rhs.y) }
+    fn mul(self, rhs: Self) -> Self {
+        Self::new(self.x * rhs.x, self.y * rhs.y)
+    }
 }
 impl Mul<i32> for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn mul(self, rhs: i32) -> Self { Self::new(self.x * rhs, self.y * rhs) }
+    fn mul(self, rhs: i32) -> Self {
+        Self::new(self.x * rhs, self.y * rhs)
+    }
 }
 
 impl Neg for Int2 {
     type Output = Self;
     #[inline(always)]
-    fn neg(self) -> Self { Self::new(-self.x, -self.y) }
+    fn neg(self) -> Self {
+        Self::new(-self.x, -self.y)
+    }
 }
 
-impl AddAssign        for Int2 { #[inline(always)] fn add_assign(&mut self, r: Self) { *self = *self + r; } }
-impl SubAssign        for Int2 { #[inline(always)] fn sub_assign(&mut self, r: Self) { *self = *self - r; } }
-impl MulAssign        for Int2 { #[inline(always)] fn mul_assign(&mut self, r: Self) { *self = *self * r; } }
-impl AddAssign<i32>   for Int2 { #[inline(always)] fn add_assign(&mut self, r: i32)  { *self = *self + r; } }
-impl SubAssign<i32>   for Int2 { #[inline(always)] fn sub_assign(&mut self, r: i32)  { *self = *self - r; } }
-impl MulAssign<i32>   for Int2 { #[inline(always)] fn mul_assign(&mut self, r: i32)  { *self = *self * r; } }
+impl AddAssign for Int2 {
+    #[inline(always)]
+    fn add_assign(&mut self, r: Self) {
+        *self = *self + r;
+    }
+}
+impl SubAssign for Int2 {
+    #[inline(always)]
+    fn sub_assign(&mut self, r: Self) {
+        *self = *self - r;
+    }
+}
+impl MulAssign for Int2 {
+    #[inline(always)]
+    fn mul_assign(&mut self, r: Self) {
+        *self = *self * r;
+    }
+}
+impl AddAssign<i32> for Int2 {
+    #[inline(always)]
+    fn add_assign(&mut self, r: i32) {
+        *self = *self + r;
+    }
+}
+impl SubAssign<i32> for Int2 {
+    #[inline(always)]
+    fn sub_assign(&mut self, r: i32) {
+        *self = *self - r;
+    }
+}
+impl MulAssign<i32> for Int2 {
+    #[inline(always)]
+    fn mul_assign(&mut self, r: i32) {
+        *self = *self * r;
+    }
+}
 
 impl PartialEq for Int2 {
     #[inline(always)]
@@ -667,17 +724,23 @@ impl fmt::Display for Int2 {
 
 impl From<[i32; 2]> for Int2 {
     #[inline(always)]
-    fn from(a: [i32; 2]) -> Self { Self::new(a[0], a[1]) }
+    fn from(a: [i32; 2]) -> Self {
+        Self::new(a[0], a[1])
+    }
 }
 
 impl From<Int2> for [i32; 2] {
     #[inline(always)]
-    fn from(v: Int2) -> Self { [v.x, v.y] }
+    fn from(v: Int2) -> Self {
+        [v.x, v.y]
+    }
 }
 
 impl From<(i32, i32)> for Int2 {
     #[inline(always)]
-    fn from((x, y): (i32, i32)) -> Self { Self::new(x, y) }
+    fn from((x, y): (i32, i32)) -> Self {
+        Self::new(x, y)
+    }
 }
 
 // Float2 → Int2 (truncating)
@@ -730,7 +793,11 @@ mod tests {
     #[test]
     fn float2_normalize_fast_approx() {
         let v = Float2::new(3.0, 4.0).normalize_fast();
-        assert!((v.length() - 1.0).abs() < 1e-3, "fast norm err: {}", v.length());
+        assert!(
+            (v.length() - 1.0).abs() < 1e-3,
+            "fast norm err: {}",
+            v.length()
+        );
     }
 
     #[test]

@@ -1,13 +1,11 @@
 use crate::b_engine;
 use crate::b_engine::Input;
 use crate::b_engine::asset_management::Asset;
-use crate::b_engine::entities;
 use crate::b_engine::entities::DynamicWorld;
 use crate::b_engine::entities::SystemGroup;
 use crate::b_engine::entities::entities::Entities;
 use crate::b_engine::entities::system_group::SystemGroupThreading;
 use crate::core_systems;
-use crate::float2::Float2;
 use crate::rendering::Renderer;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -22,6 +20,7 @@ pub struct Engine {
 
 pub const MAIN_WORLD: &str = "main";
 pub const RENDER_GROUP: &str = "render_group";
+pub const PHYSICS_GROUP: &str = "physics_group";
 pub const SPRITE_BATCH_SIZE: usize = 1024 * 4; // 2^10
 pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 pub const INCLUDE_ATLAS: &[&str] = &["tree.png", "Tux.png"];
@@ -63,49 +62,10 @@ impl Engine {
     }
 
     fn setup_sprites(&mut self) {
-        let world = self.entities.get_world(MAIN_WORLD).unwrap();
-        for y in 0..20 {
-            for x in 0..20 {
-                let e = world.create_entity();
-                world.add_component(
-                    e,
-                    entities::core_components::Transform {
-                        position: Float2::new(x as f32, y as f32),
-                    },
-                );
-                world.add_component(
-                    e,
-                    entities::core_components::Sprite {
-                        visible: true,
-                        batch_index: 0,
-                        index: usize::MAX,
-                        atlas_id: 0,
-                        width: 1,
-                        height: 1,
-                    },
-                );
-            }
-        }
-        // for y in 64..128 {
-        //     for x in 64..256 {
-        //         let e = world.spawn();
-        //         world.insert(
-        //             e,
-        //             entities::core_components::Transform {
-        //                 position: Float2::new(x as f32, y as f32),
-        //             },
-        //         );
-        //         world.insert(
-        //             e,
-        //             entities::core_components::Sprite {
-        //                 visible: true,
-        //                 batch_index: 0,
-        //                 index: usize::MAX,
-        //                 atlas_id: 1,
-        //                 width: 1,
-        //                 height: 1,
-        //             },
-        //         );
+        let _world = self.entities.get_world(MAIN_WORLD).unwrap();
+        // for y in 0..600 {
+        //     for x in 0..20 {
+
         //     }
         // }
     }
@@ -177,6 +137,19 @@ impl Engine {
         );
         let group = self.entities.get_system_group_mut("test_group").unwrap();
         group.register_system(Box::new(core_systems::test_system::TestSystem::new()), 0);
+
+        // Physics
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            PHYSICS_GROUP,
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
+        group.register_system(
+            Box::new(crate::b_engine::physics_systems::physics_system::PhysicsSystem::new()),
+            0,
+        );
+
         // initialize them jhons
         self.entities.start_system_groups();
     }

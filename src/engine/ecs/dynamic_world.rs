@@ -184,7 +184,20 @@ impl DynamicWorld {
     }
 
     // ── Optional Component Query ──────────────────────────────────────────────
-
+    pub fn get_component<T, R>(&self, entity: Entity, f: impl FnOnce(&T) -> R) -> Option<R>
+    where
+        T: Any + Send + Sync + 'static,
+    {
+        self.with_storage::<T, _>(|store| store.get(entity.0).map(f))
+            .flatten()
+    }
+    pub fn get_component_mut<T, R>(&self, entity: Entity, f: impl FnOnce(&mut T) -> R) -> Option<R>
+    where
+        T: Any + Send + Sync + 'static,
+    {
+        self.with_storage_mut::<T, _>(|store| store.get_mut(entity.0).map(f))
+            .flatten()
+    }
     pub fn for_each_optional<A, B>(&self, mut f: impl FnMut(Entity, &A, Option<&B>))
     where
         A: Any + Send + Sync + 'static,
