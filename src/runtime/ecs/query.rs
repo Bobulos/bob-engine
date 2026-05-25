@@ -2,10 +2,9 @@
 ///
 /// Implement this to add arbitrary per entity conditions on top of a tuple query.
 /// Common built-in filters: `With<T>`, `Without<T>`, `Changed<T>` (see below).
-
-use crate::runtime::entities::dynamic_world::DynamicWorld;
-use std::marker::PhantomData;
+use crate::runtime::ecs::dynamic_world::DynamicWorld;
 use std::any::Any;
+use std::marker::PhantomData;
 pub trait QueryFilter: Send + Sync {
     fn matches(&self, entity_id: usize, world: &DynamicWorld) -> bool;
 }
@@ -14,7 +13,9 @@ pub trait QueryFilter: Send + Sync {
 pub struct With<T: Any + Send + Sync + 'static>(PhantomData<T>);
 
 impl<T: Any + Send + Sync + 'static> With<T> {
-    pub fn new() -> Self { Self(PhantomData) }
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
 }
 
 impl<T: Any + Send + Sync + 'static> QueryFilter for With<T> {
@@ -27,7 +28,9 @@ impl<T: Any + Send + Sync + 'static> QueryFilter for With<T> {
 pub struct Without<T: Any + Send + Sync + 'static>(PhantomData<T>);
 
 impl<T: Any + Send + Sync + 'static> Without<T> {
-    pub fn new() -> Self { Self(PhantomData) }
+    pub fn new() -> Self {
+        Self(PhantomData)
+    }
 }
 
 impl<T: Any + Send + Sync + 'static> QueryFilter for Without<T> {
@@ -54,5 +57,7 @@ impl<A: QueryFilter, B: QueryFilter> QueryFilter for Or<A, B> {
 
 pub struct NoFilter;
 impl QueryFilter for NoFilter {
-    fn matches(&self, _entity_id: usize, _world: &DynamicWorld) -> bool { true }
+    fn matches(&self, _entity_id: usize, _world: &DynamicWorld) -> bool {
+        true
+    }
 }

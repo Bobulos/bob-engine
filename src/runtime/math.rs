@@ -1,3 +1,3 @@
 pub mod float2;
 
-pub use Float2;
+pub use float2::Float2;

@@ -4,7 +4,7 @@
 // use std::path::Path;
 
 mod runtime;
-
+pub mod test;
 // #[path = "engine/ecs/component_store.rs"]
 // pub mod component_store;
 // #[path = "engine/ecs/core_systems/core_components/mod.rs"]

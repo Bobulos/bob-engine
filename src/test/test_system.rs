@@ -1,7 +1,7 @@
-use crate::runtime::entities::core_components::Transform;
-use crate::runtime::rendering
-use crate::runtime::entities::{DynamicWorld, SystemBase};
-use crate::float2::Float2;
+use crate::runtime::ecs::core_components::Transform;
+use crate::runtime::ecs::{DynamicWorld, SystemBase};
+use crate::runtime::math::Float2;
+use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::Arc;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
@@ -23,7 +23,7 @@ const GRAVITY: f32 = 9.8;
 const ENTITY_COUNT: usize = 10000;
 impl SystemBase for TestSystem {
     fn on_start(&mut self, world: &Arc<DynamicWorld>) {
-        for y in -20..20 {
+        for y in 10..100 {
             for x in -20..20 {
                 let x = (x * 4) as f32;
                 let y = (y * 4) as f32;

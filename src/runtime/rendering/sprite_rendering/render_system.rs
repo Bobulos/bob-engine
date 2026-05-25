@@ -1,7 +1,8 @@
-use crate::b_engine::entities::core_components::{Sprite, Transform};
-use crate::b_engine::entities::{DynamicWorld, Entity, SystemBase};
-use crate::rendering::Renderer;
-use crate::rendering::instance::Instance;
+use crate::runtime::ecs::core_components::Transform;
+use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
+use crate::runtime::rendering::Renderer;
+use crate::runtime::rendering::instance::Instance;
+use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, RwLock};
 
 // #[path = "../engine//ecs/component_store.rs"]

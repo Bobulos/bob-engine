@@ -1,5 +1,5 @@
+use crate::runtime::math::Float2;
 use crate::runtime::phys::aabb::Aabb;
-use crate::float2::Float2;
 #[derive(Debug, Clone)]
 pub enum Shape {
     Circle { radius: f32 },

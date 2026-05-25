@@ -1,6 +1,6 @@
+use crate::runtime::math::Float2;
 use crate::runtime::phys::Aabb;
 use crate::runtime::phys::Shape;
-use crate::float2::Float2;
 
 #[derive(Debug, Clone)]
 pub struct RigidBody {

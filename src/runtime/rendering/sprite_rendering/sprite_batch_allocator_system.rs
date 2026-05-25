@@ -1,9 +1,9 @@
-use crate::b_engine;
-use crate::b_engine::asset_management::Asset;
-use crate::b_engine::entities::Entity;
-use crate::b_engine::entities::{DynamicWorld, SystemBase};
-use crate::core_components::Sprite;
-use crate::rendering::{Instance, Renderer};
+use crate::runtime::asset_management::Asset;
+use crate::runtime::ecs::Entity;
+use crate::runtime::ecs::{DynamicWorld, SystemBase};
+use crate::runtime::rendering::sprite_rendering::components::Sprite;
+use crate::runtime::rendering::{Instance, Renderer};
+use crate::runtime::{self, rendering};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -48,9 +48,9 @@ impl SpriteBatchAllocatorSystem {
                             uv_scale: [1.0, 1.0],
                             uv_offset: [0.0, 0.0],
                         };
-                        b_engine::engine::SPRITE_BATCH_SIZE
+                        runtime::engine::SPRITE_BATCH_SIZE
                     ],
-                    crate::rendering::renderer::PipelineKey::Default,
+                    rendering::renderer::PipelineKey::Default,
                 );
 
                 atlas_batches.push(vec![batch_id]);
@@ -81,7 +81,7 @@ impl SpriteBatchAllocatorSystem {
 
         // Find a batch with room
         for batch_idx in 0..batches.len() {
-            if slots[batch_idx] < b_engine::engine::SPRITE_BATCH_SIZE {
+            if slots[batch_idx] < runtime::engine::SPRITE_BATCH_SIZE {
                 let slot = self.atlas_next_slot[atlas_id][batch_idx];
                 self.atlas_next_slot[atlas_id][batch_idx] += 1;
                 return (batches[batch_idx], slot); // slot is LOCAL (0..SPRITE_BATCH_SIZE)
@@ -103,9 +103,9 @@ impl SpriteBatchAllocatorSystem {
                         uv_scale: [1.0, 1.0],
                         uv_offset: [0.0, 0.0],
                     };
-                    b_engine::engine::SPRITE_BATCH_SIZE
+                    runtime::engine::SPRITE_BATCH_SIZE
                 ],
-                crate::rendering::renderer::PipelineKey::Default,
+                rendering::renderer::PipelineKey::Default,
             )
         };
 

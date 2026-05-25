@@ -1,3 +1,3 @@
 pub mod components;
 pub mod render_system;
-pub mod sprite_batch_allocator;
+pub mod sprite_batch_allocator_system;

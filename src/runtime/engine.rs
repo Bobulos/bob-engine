@@ -1,11 +1,11 @@
-use crate::core_systems;
-use crate::runtime;
 use crate::runtime::Input;
 use crate::runtime::asset_management::Asset;
-use crate::runtime::entities::DynamicWorld;
-use crate::runtime::entities::SystemGroup;
-use crate::runtime::entities::entities::Entities;
-use crate::runtime::entities::system_group::SystemGroupThreading;
+use crate::runtime::ecs::DynamicWorld;
+use crate::runtime::ecs::SystemGroup;
+use crate::runtime::ecs::entities::Entities;
+use crate::runtime::ecs::system_group::SystemGroupThreading;
+use crate::runtime::rendering;
+use crate::runtime::rendering::Renderer;
 
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -53,7 +53,7 @@ impl Engine {
     fn setup_world(&mut self) {
         self.entities
             .add_world(MAIN_WORLD, Arc::new(DynamicWorld::new()));
-        runtime::entities::system_bootstrap::bootstrap(&self);
+        crate::runtime::ecs::system_bootstrap::bootstrap(&self);
     }
 
     fn setup_renderer(&mut self) {
@@ -63,11 +63,6 @@ impl Engine {
 
     fn setup_sprites(&mut self) {
         let _world = self.entities.get_world(MAIN_WORLD).unwrap();
-        // for y in 0..600 {
-        //     for x in 0..20 {
-
-        //     }
-        // }
     }
 
     fn setup_tilemap(&mut self) {
@@ -107,52 +102,13 @@ impl Engine {
     fn setup_systems(&mut self) {
         println!("Initializing system groups");
 
-        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
-            RENDER_GROUP,
-            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
-        // Render system
-        let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
-        let _rendering_system = group.register_system(
-            Box::new(core_systems::render_system::RenderSystem::new(Arc::clone(
-                &self.renderer,
-            ))),
-            i32::MIN + 1,
-        );
-        let _rendering_system = group.register_system(
-            Box::new(
-                core_systems::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
-                    Arc::clone(&self.renderer),
-                    INCLUDE_ATLAS.to_vec(),
-                ),
-            ),
-            i32::MIN,
-        );
-
-        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
-            "test_group",
-            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
-        let group = self.entities.get_system_group_mut("test_group").unwrap();
-        group.register_system(Box::new(core_systems::test_system::TestSystem::new()), 0);
-
-        // Physics
-        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
-            PHYSICS_GROUP,
-            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
-        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
-        group.register_system(
-            Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
-            0,
-        );
-
+        self.setup_rendering();
+        self.setup_test();
+        self.setup_physics();
         // initialize them jhons
         self.entities.start_system_groups();
     }
+
     pub fn run(&mut self) {
         self.frame_count += 1;
 
@@ -248,5 +204,54 @@ impl Engine {
     }
     fn update_entities(&mut self) {
         self.entities.update_system_groups();
+    }
+
+    // Setup bs
+    fn setup_physics(&mut self) {
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            PHYSICS_GROUP,
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
+        group.register_system(
+            Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
+            0,
+        );
+    }
+    fn setup_test(&mut self) {
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            "test_group",
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        let group = self.entities.get_system_group_mut("test_group").unwrap();
+        group.register_system(Box::new(crate::test::test_system::TestSystem::new()), 0);
+    }
+    fn setup_rendering(&mut self) {
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            RENDER_GROUP,
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        // Render system
+        let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
+        let _rendering_system = group.register_system(
+            Box::new(
+                rendering::sprite_rendering::render_system::RenderSystem::new(Arc::clone(
+                    &self.renderer,
+                )),
+            ),
+            i32::MIN + 1,
+        );
+        let _rendering_system = group.register_system(
+            Box::new(
+                rendering::sprite_rendering::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
+                    Arc::clone(&self.renderer),
+                    INCLUDE_ATLAS.to_vec(),
+                ),
+            ),
+            i32::MIN,
+        );
     }
 }

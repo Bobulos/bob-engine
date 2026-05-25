@@ -1,30 +1,16 @@
-// physics_system.rs
-use crate::runtime::entities::core_components::Transform;
-use crate::runtime::entities::{DynamicWorld, Entity, SystemBase};
+use crate::runtime::ecs::core_components::Transform;
+use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
+use crate::runtime::math::Float2;
+use crate::runtime::phys::ContactManifold;
 use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
+use crate::runtime::phys::physics_config::PhysicsConfig;
 pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
-use crate::float2::Float2;
 use std::sync::Arc;
-pub struct PhysicsConfig {
-    pub gravity: Float2,
-    pub iterations: usize,
-    pub slop: f32,
-    pub correction_percent: f32,
-}
-
-impl Default for PhysicsConfig {
-    fn default() -> Self {
-        Self {
-            gravity: Float2::new(0.0, -9.81),
-            iterations: 10,
-            slop: 0.01,
-            correction_percent: 0.4,
-        }
-    }
-}
 
 pub struct PhysicsSystem {
-    config: PhysicsConfig,
+    pub config: PhysicsConfig,
+    manifolds: Vec<Manifold>,
+    snapshots: Vec<(Entity, Aabb, Float2, f32, Shape)>,
 }
 
 const FIXED_DT: f32 = 1.0 / 60.0;
@@ -33,42 +19,41 @@ impl PhysicsSystem {
     pub fn new() -> Self {
         Self {
             config: PhysicsConfig::default(),
+            manifolds: Vec::new(),
+            snapshots: Vec::new(),
         }
     }
 
     /// Spawn a physics-backed entity; Transform is synced from RigidBody.position.
-    pub fn spawn_body(&self, ecs: &Arc<DynamicWorld>, body: RigidBody) -> Entity {
+    pub fn spawn_body(&self, world: &Arc<DynamicWorld>, body: RigidBody) -> Entity {
         let pos = body.position;
         let angle = body.angle;
-        let entity = ecs.create_entity();
-        ecs.add_component(
+        let entity = world.create_entity();
+        world.add_component(
             entity,
             Transform {
                 position: pos,
                 angle,
             },
         );
-        ecs.add_component(entity, body);
+        world.add_component(entity, body);
         entity
     }
 
     // ── Fixed-step sub-systems ────────────────────────────────────────────────
 
-    fn integrate(&self, ecs: &Arc<DynamicWorld>, dt: f32) {
+    fn integrate(&self, world: &Arc<DynamicWorld>, dt: f32) {
         let g = self.config.gravity;
-        ecs.for_each_mut::<RigidBody>(|_e, body| {
+        world.for_each_mut::<RigidBody>(|_e, body| {
             body.integrate(dt, g);
         });
     }
 
     /// Collect all (Entity, snapshot) pairs for broad + narrow phase.
-    fn collect_snapshots(
-        &self,
-        ecs: &Arc<DynamicWorld>,
-    ) -> Vec<(Entity, Aabb, Float2, f32, Shape)> {
-        let mut out = Vec::new();
-        ecs.for_each::<RigidBody>(|entity, body| {
-            out.push((
+    fn collect_snapshots(&mut self, world: &Arc<DynamicWorld>) {
+        self.snapshots.clear();
+        world.for_each::<RigidBody>(|entity, body| {
+            self.snapshots.push((
                 entity,
                 body.aabb(),
                 body.position,
@@ -76,21 +61,15 @@ impl PhysicsSystem {
                 body.shape.clone(),
             ));
         });
-        out
     }
 
-    fn build_manifolds(
-        &self,
-        _world: &Arc<DynamicWorld>,
-        snapshots: &[(Entity, Aabb, Float2, f32, Shape)],
-    ) -> Vec<Manifold> {
-        let mut manifolds = Vec::new();
-        let n = snapshots.len();
-
+    fn build_manifolds(&mut self, _world: &Arc<DynamicWorld>) {
+        self.manifolds.clear();
+        let n = self.snapshots.len();
         for i in 0..n {
             for j in (i + 1)..n {
-                let (ea, aabb_a, pos_a, angle_a, ref shape_a) = snapshots[i];
-                let (eb, aabb_b, pos_b, angle_b, ref shape_b) = snapshots[j];
+                let (ea, aabb_a, pos_a, angle_a, ref shape_a) = self.snapshots[i];
+                let (eb, aabb_b, pos_b, angle_b, ref shape_b) = self.snapshots[j];
 
                 // Broad phase
                 if !aabb_a.overlaps(aabb_b) {
@@ -98,46 +77,46 @@ impl PhysicsSystem {
                 }
 
                 // Narrow phase
-                let result = match (shape_a, shape_b) {
+                let result: Option<(Float2, f32, ContactManifold)> = match (shape_a, shape_b) {
                     (Shape::Circle { radius: ra }, Shape::Circle { radius: rb }) => {
-                        circle_circle(pos_a, *ra, pos_b, *rb).map(|(n, d, c)| (n, d, vec![c]))
+                        circle_circle(pos_a, *ra, pos_b, *rb)
                     }
                     (Shape::Rect { .. }, Shape::Rect { .. }) => {
                         let va = shape_a.rect_vertices(pos_a, angle_a);
                         let vb = shape_b.rect_vertices(pos_b, angle_b);
-                        rect_rect(&va, &vb, pos_a, pos_b).map(|(n, d, c)| (n, d, vec![c]))
+                        rect_rect(&va, &vb, pos_a, pos_b)
                     }
                     (Shape::Circle { radius }, Shape::Rect { .. }) => {
                         let verts = shape_b.rect_vertices(pos_b, angle_b);
-                        circle_rect(pos_a, *radius, &verts, pos_b).map(|(n, d, c)| (-n, d, vec![c]))
+                        circle_rect(pos_a, *radius, &verts, pos_b).map(|(n, d, c)| (-n, d, c))
                     }
                     (Shape::Rect { .. }, Shape::Circle { radius }) => {
                         let verts = shape_a.rect_vertices(pos_a, angle_a);
-                        circle_rect(pos_b, *radius, &verts, pos_a).map(|(n, d, c)| (n, d, vec![c]))
+                        circle_rect(pos_b, *radius, &verts, pos_a)
                     }
                 };
 
-                if let Some((normal, depth, contacts)) = result {
-                    manifolds.push(Manifold {
+                if let Some((normal, depth, contact_manifold)) = result {
+                    self.manifolds.push(Manifold {
                         body_a: ea,
                         body_b: eb,
                         normal,
                         depth,
-                        contacts,
+                        contacts: contact_manifold.points,
+                        contact_count: contact_manifold.count,
                     });
                 }
             }
         }
-        manifolds
     }
 
-    fn resolve_impulses(&self, world: &Arc<DynamicWorld>, manifolds: &[Manifold]) {
+    fn resolve_impulses(&self, world: &Arc<DynamicWorld>) {
         for _ in 0..self.config.iterations {
-            for m in manifolds {
+            for m in &self.manifolds {
                 if m.body_a == m.body_b {
                     continue;
                 }
-                for &contact in &m.contacts {
+                for &contact in &m.contacts[..m.contact_count] {
                     // Read body_a first, releasing the lock before touching body_b
                     let body_a_snapshot = world.get_component::<RigidBody, _>(m.body_a, |a| {
                         (
@@ -223,12 +202,12 @@ impl PhysicsSystem {
         }
     }
 
-    fn positional_correction(&self, ecs: &Arc<DynamicWorld>, manifolds: &[Manifold]) {
-        for m in manifolds {
+    fn positional_correction(&self, world: &Arc<DynamicWorld>) {
+        for m in &self.manifolds {
             // Read pass: extract the inverse masses safely
-            let mass_data = ecs
+            let mass_data = world
                 .get_component::<RigidBody, _>(m.body_a, |a| {
-                    ecs.get_component::<RigidBody, _>(m.body_b, |b| (a.inv_mass, b.inv_mass))
+                    world.get_component::<RigidBody, _>(m.body_b, |b| (a.inv_mass, b.inv_mass))
                 })
                 .flatten();
 
@@ -243,10 +222,10 @@ impl PhysicsSystem {
                 let correction = m.normal * magnitude;
 
                 // Mutate pass
-                ecs.get_component_mut::<RigidBody, _>(m.body_a, |a| {
+                world.get_component_mut::<RigidBody, _>(m.body_a, |a| {
                     a.position -= correction * inv_mass_a;
                 });
-                ecs.get_component_mut::<RigidBody, _>(m.body_b, |b| {
+                world.get_component_mut::<RigidBody, _>(m.body_b, |b| {
                     b.position += correction * inv_mass_b;
                 });
             }
@@ -254,27 +233,25 @@ impl PhysicsSystem {
     }
 
     /// Copy RigidBody positions back to Transform components.
-    fn sync_transforms(&self, ecs: &Arc<DynamicWorld>) {
-        ecs.for_each2_mut_both::<RigidBody, Transform>(|_e, body, transform| {
+    fn sync_transforms(&self, world: &Arc<DynamicWorld>) {
+        world.for_each2_mut_both::<RigidBody, Transform>(|_e, body, transform| {
             transform.position = body.position;
             transform.angle = body.angle;
         });
     }
 
-    fn step(&self, ecs: &Arc<DynamicWorld>) {
-        // println!("1. Integrate");
-        self.integrate(ecs, FIXED_DT);
+    fn step(&mut self, world: &Arc<DynamicWorld>) {
+        self.integrate(world, FIXED_DT);
 
-        // println!("2. Snapshots");
-        let snapshots = self.collect_snapshots(ecs);
+        self.collect_snapshots(world);
 
-        let manifolds = self.build_manifolds(ecs, &snapshots);
+        self.build_manifolds(world);
 
-        self.resolve_impulses(ecs, &manifolds);
+        self.resolve_impulses(world);
 
-        self.positional_correction(ecs, &manifolds);
+        self.positional_correction(world);
 
-        self.sync_transforms(ecs);
+        self.sync_transforms(world);
     }
 }
 
@@ -283,7 +260,7 @@ impl SystemBase for PhysicsSystem {
         // Ground plane (static)
         let mut col = RigidBody::new_static(
             Shape::Rect {
-                half_w: 20.0,
+                half_w: 3000.0,
                 half_h: 0.5,
             },
             Float2::new(0.0, -5.0),

@@ -1,4 +1,5 @@
 pub mod asset_management;
+pub mod ecs;
 pub mod engine;
 pub mod input;
 pub mod math;

@@ -1,5 +1,5 @@
-use crate::runtime::texture::Texture;
-use crate::runtime::tilemap::{TileUV, TilemapInfo};
+use crate::runtime::rendering::texture::Texture;
+use crate::runtime::rendering::tilemap_rendering::tilemap::{TileUV, TilemapInfo};
 use wgpu::util::DeviceExt;
 
 pub struct TilemapRenderer {
