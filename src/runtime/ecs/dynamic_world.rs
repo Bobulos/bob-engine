@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use crate::b_engine::entities::query::QueryFilter;
+use crate::runtime::entities::query::QueryFilter;
 use crate::component_store::ComponentStore;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

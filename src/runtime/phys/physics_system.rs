@@ -1,8 +1,8 @@
 // physics_system.rs
-use crate::b_engine::entities::core_components::Transform;
-use crate::b_engine::entities::{DynamicWorld, Entity, SystemBase};
-use crate::b_engine::physics_systems::physics::{circle_circle, circle_rect, rect_rect};
-pub use crate::b_engine::physics_systems::{Aabb, Manifold, RigidBody, Shape};
+use crate::runtime::entities::core_components::Transform;
+use crate::runtime::entities::{DynamicWorld, Entity, SystemBase};
+use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
+pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
 use crate::float2::Float2;
 use std::sync::Arc;
 pub struct PhysicsConfig {

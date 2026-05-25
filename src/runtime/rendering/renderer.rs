@@ -1,8 +1,8 @@
-use crate::rendering;
-use crate::rendering::camera::Camera;
-use crate::rendering::instance::Instance;
-use crate::rendering::texture::Texture;
-use crate::rendering::vertex::Vertex;
+use crate::runtime::rendering;
+use crate::runtime::rendering::camera::Camera;
+use crate::runtime::rendering::instance::Instance;
+use crate::runtime::rendering::texture::Texture;
+use crate::runtime::rendering::vertex::Vertex;
 use std::collections::HashMap;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;

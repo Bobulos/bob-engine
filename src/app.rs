@@ -1,5 +1,5 @@
-use crate::b_engine::Engine;
-use crate::rendering;
+use crate::runtime::Engine;
+use crate::runtime::rendering;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalSize, Size};

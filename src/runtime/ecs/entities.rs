@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str, sync::Arc};
 
-use crate::b_engine::entities::{DynamicWorld, SystemGroup};
+use crate::runtime::entities::{DynamicWorld, SystemGroup};
 
 /// This is a wrapper for the world and system groups held by the engine
 pub struct Entities {

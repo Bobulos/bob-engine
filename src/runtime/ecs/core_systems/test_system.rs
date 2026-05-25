@@ -1,5 +1,6 @@
-use crate::b_engine::entities::core_components::{Sprite, Transform};
-use crate::b_engine::entities::{DynamicWorld, SystemBase};
+use crate::runtime::entities::core_components::Transform;
+use crate::runtime::rendering
+use crate::runtime::entities::{DynamicWorld, SystemBase};
 use crate::float2::Float2;
 use std::sync::Arc;
 // #[path = "../engine//ecs/component_store.rs"]
@@ -22,7 +23,7 @@ const GRAVITY: f32 = 9.8;
 const ENTITY_COUNT: usize = 10000;
 impl SystemBase for TestSystem {
     fn on_start(&mut self, world: &Arc<DynamicWorld>) {
-        for y in -200..20 {
+        for y in -20..20 {
             for x in -20..20 {
                 let x = (x * 4) as f32;
                 let y = (y * 4) as f32;
@@ -45,8 +46,8 @@ impl SystemBase for TestSystem {
                         height: 1,
                     },
                 );
-                let mut rb = crate::b_engine::physics_systems::RigidBody::new(
-                    crate::b_engine::physics_systems::Shape::Circle { radius: 0.5 },
+                let mut rb = crate::runtime::phys::RigidBody::new(
+                    crate::runtime::phys::Shape::Circle { radius: 0.5 },
                     1.0,
                     Float2::new(x, y),
                 );

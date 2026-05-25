@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::b_engine::entities::DynamicWorld;
+use crate::runtime::entities::DynamicWorld;
 
 pub trait SystemBase: Send + Sync {
     fn on_start(&mut self, world: &Arc<DynamicWorld>);

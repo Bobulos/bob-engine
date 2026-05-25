@@ -1,12 +1,12 @@
-use crate::b_engine;
-use crate::b_engine::Input;
-use crate::b_engine::asset_management::Asset;
-use crate::b_engine::entities::DynamicWorld;
-use crate::b_engine::entities::SystemGroup;
-use crate::b_engine::entities::entities::Entities;
-use crate::b_engine::entities::system_group::SystemGroupThreading;
 use crate::core_systems;
-use crate::rendering::Renderer;
+use crate::runtime;
+use crate::runtime::Input;
+use crate::runtime::asset_management::Asset;
+use crate::runtime::entities::DynamicWorld;
+use crate::runtime::entities::SystemGroup;
+use crate::runtime::entities::entities::Entities;
+use crate::runtime::entities::system_group::SystemGroupThreading;
+
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
@@ -53,7 +53,7 @@ impl Engine {
     fn setup_world(&mut self) {
         self.entities
             .add_world(MAIN_WORLD, Arc::new(DynamicWorld::new()));
-        b_engine::entities::system_bootstrap::bootstrap(&self);
+        runtime::entities::system_bootstrap::bootstrap(&self);
     }
 
     fn setup_renderer(&mut self) {
@@ -146,7 +146,7 @@ impl Engine {
         );
         let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
         group.register_system(
-            Box::new(crate::b_engine::physics_systems::physics_system::PhysicsSystem::new()),
+            Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
             0,
         );
 

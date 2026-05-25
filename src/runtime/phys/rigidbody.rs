@@ -1,5 +1,5 @@
-use crate::b_engine::physics_systems::Aabb;
-use crate::b_engine::physics_systems::Shape;
+use crate::runtime::phys::Aabb;
+use crate::runtime::phys::Shape;
 use crate::float2::Float2;
 
 #[derive(Debug, Clone)]
@@ -68,9 +68,9 @@ impl RigidBody {
         self.force += f;
     }
 
-    pub fn apply_force_at(&mut self, f: Float2, PhysicsWorld_point: Float2) {
+    pub fn apply_force_at(&mut self, f: Float2, physics_world_point: Float2) {
         self.force += f;
-        let r = PhysicsWorld_point - self.position;
+        let r = physics_world_point - self.position;
         self.torque += r.cross(f);
     }
 

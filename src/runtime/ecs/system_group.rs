@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 use std::thread;
 
-use crate::b_engine::entities::{DynamicWorld, SystemBase};
+use crate::runtime::entities::{DynamicWorld, SystemBase};
 
 const MAX_SYSTEMS_PER_GROUP: usize = 256;
 pub struct SystemGroup {

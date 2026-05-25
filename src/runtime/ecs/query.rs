@@ -3,7 +3,7 @@
 /// Implement this to add arbitrary per entity conditions on top of a tuple query.
 /// Common built-in filters: `With<T>`, `Without<T>`, `Changed<T>` (see below).
 
-use crate::b_engine::entities::dynamic_world::DynamicWorld;
+use crate::runtime::entities::dynamic_world::DynamicWorld;
 use std::marker::PhantomData;
 use std::any::Any;
 pub trait QueryFilter: Send + Sync {
