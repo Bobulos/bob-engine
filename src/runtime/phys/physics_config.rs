@@ -11,8 +11,8 @@ impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
             gravity: Float2::new(0.0, 0.0),
-            iterations: 10,
-            slop: 0.01,
+            iterations: 5,
+            slop: 0.1,
             correction_percent: 0.4,
         }
     }
