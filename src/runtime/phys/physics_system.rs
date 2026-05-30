@@ -33,7 +33,7 @@ impl PhysicsSystem {
             entity,
             Transform {
                 position: pos,
-                angle,
+                rotation: angle,
             },
         );
         world.add_component(entity, body);
@@ -236,7 +236,7 @@ impl PhysicsSystem {
     fn sync_transforms(&self, world: &Arc<DynamicWorld>) {
         world.for_each2_mut_both::<RigidBody, Transform>(|_e, body, transform| {
             transform.position = body.position;
-            transform.angle = body.angle;
+            transform.rotation = body.angle;
         });
     }
 

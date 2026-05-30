@@ -28,6 +28,7 @@ impl SystemBase for RenderSystem {
                         size: [1.0, 1.0],
                         uv_offset: [0.0, 0.0],
                         uv_scale: [1.0, 1.0],
+                        rotation: transform.rotation,
                     };
                 }
             },

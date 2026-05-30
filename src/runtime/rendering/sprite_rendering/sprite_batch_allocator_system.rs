@@ -47,6 +47,7 @@ impl SpriteBatchAllocatorSystem {
                             size: [1.0, 1.0],
                             uv_scale: [1.0, 1.0],
                             uv_offset: [0.0, 0.0],
+                            rotation: 0.0,
                         };
                         runtime::engine::SPRITE_BATCH_SIZE
                     ],
@@ -102,6 +103,7 @@ impl SpriteBatchAllocatorSystem {
                         size: [1.0, 1.0],
                         uv_scale: [1.0, 1.0],
                         uv_offset: [0.0, 0.0],
+                        rotation: 0.0,
                     };
                     runtime::engine::SPRITE_BATCH_SIZE
                 ],

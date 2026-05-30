@@ -10,7 +10,7 @@ pub struct PhysicsConfig {
 impl Default for PhysicsConfig {
     fn default() -> Self {
         Self {
-            gravity: Float2::new(0.0, -9.81),
+            gravity: Float2::new(0.0, 0.0),
             iterations: 10,
             slop: 0.01,
             correction_percent: 0.4,

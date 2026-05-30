@@ -26,3 +26,4 @@ rust-embed = { version = "8", features = ["debug-embed"] }
 wgpu = "29.0.0"
 pollster = "0.4.0"
 image = "0.25"
+rand = "0.10.1"
