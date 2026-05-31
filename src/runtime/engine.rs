@@ -134,7 +134,7 @@ impl Engine {
             std::thread::sleep(target_frame_time - elapsed);
         }
     }
-    const CAMERA_SPEED: f32 = 0.1;
+    const CAMERA_SPEED: f32 = 1.1;
     pub fn player_loop(&mut self) {
         let input = self.input.read().unwrap();
 

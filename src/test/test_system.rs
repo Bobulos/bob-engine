@@ -3,34 +3,22 @@ use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{Float2, float2};
 use crate::runtime::phys::RigidBody;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
-use rand::Rng;
 use std::sync::Arc;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
-pub struct TestSystem {
-    spawned: u32,
-    targets: Vec<Float2>,
-    accumulator: i32,
-}
+pub struct TestSystem {}
 impl TestSystem {
     pub fn new() -> Self {
-        Self {
-            spawned: 0,
-            targets: Vec::new(),
-            accumulator: 0,
-        }
+        Self {}
     }
 }
-const GRAVITY: f32 = 9.8;
-const ENTITY_COUNT: usize = 10000;
 impl SystemBase for TestSystem {
     fn on_start(&mut self, world: &Arc<DynamicWorld>) {
         for _ in 0..100 {
             let e = world.create_entity();
-            let pos = Float2::new(
-                rand::random::<f32>() * 2000.0,
-                rand::random::<f32>() * 2000.0,
-            );
+            let x = (rand::random::<f32>() * 2000.0) - 1000.0;
+            let y = (rand::random::<f32>() * 2000.0) - 1000.0;
+            let pos = Float2::new(x, y);
             world.add_component(
                 e,
                 Transform {
@@ -58,7 +46,7 @@ impl SystemBase for TestSystem {
                 pos,
             );
 
-            rb.velocity = (Float2::new(0.0, 60.0) - pos).normalize() * 60.0;
+            rb.velocity = (Float2::new(0.0, 60.0) - pos).normalize() * 120.0;
             world.add_component(e, rb);
         }
 
