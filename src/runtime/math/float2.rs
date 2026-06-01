@@ -1,18 +1,3 @@
-/// SIMD-optimized 2D vector types for Rust
-/// Targets x86_64 SSE2 / ARM NEON via cfg attributes.
-/// Falls back to scalar on unsupported targets.
-///
-/// Build with:   cargo build --release
-/// Run tests:    cargo test
-/// Benchmark:    cargo bench (requires criterion in Cargo.toml)
-// ─── Cargo.toml snippet ──────────────────────────────────────────────────────
-// [dependencies]
-// bytemuck = "1"          # optional: safe Pod/Zeroable casts
-//
-// [features]
-// default = ["simd"]
-// simd = []               # gate to allow opt-out in embedded targets
-// ─────────────────────────────────────────────────────────────────────────────
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 

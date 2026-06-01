@@ -23,7 +23,12 @@ pub const RENDER_GROUP: &str = "render_group";
 pub const PHYSICS_GROUP: &str = "physics_group";
 pub const SPRITE_BATCH_SIZE: usize = 1024 * 4; // 2^10
 pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
-pub const INCLUDE_ATLAS: &[&str] = &["tree.png", "Tux.png"];
+pub const INCLUDE_ATLAS: &[&str] = &[
+    "tree.png",
+    "Tux.png",
+    "exp/ship_parts_s.png",
+    "exp/projectiles_m.png",
+];
 impl Engine {
     // We take a mutable reference because the engine will need
     // to tell the renderer to clear/present/draw.s

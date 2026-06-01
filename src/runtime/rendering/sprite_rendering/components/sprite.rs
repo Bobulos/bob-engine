@@ -7,20 +7,31 @@ pub struct Sprite {
     pub width: u32,
     pub height: u32,
     pub visible: bool,
-    //pub source_rect: Option<sdl3::rect::Rect>, // Optional: for spritesheets/animation
+
+    // uv's
+    pub uv_offset: [f32; 2],
+    pub uv_scale: [f32; 2],
 }
 
 impl Sprite {
-    pub fn new(atlas_id: usize, width: u32, height: u32, visible: bool) -> Self {
+    pub fn new(
+        atlas_id: usize,
+        width: u32,
+        height: u32,
+        visible: bool,
+        uv_offset: [f32; 2],
+        uv_scale: [f32; 2],
+    ) -> Self {
         Self {
             batch_index: 0, // Will be set later when the sprite is added to a batch
-            index: 0,
+            index: usize::MAX,
             //enabled: true,
             atlas_id,
             width,
             height,
             visible,
-            //source_rect: None,
+            uv_offset,
+            uv_scale,
         }
     }
 }

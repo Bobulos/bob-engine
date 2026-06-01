@@ -8,8 +8,16 @@ pub struct Instance {
     pub rotation: f32,
     //pub _padding: [f32; 3],
 }
-
 impl Instance {
+    pub fn default() -> Self {
+        Self {
+            position: [f32::MAX, f32::MAX],
+            size: [1.0, 1.0],
+            uv_scale: [1.0, 1.0],
+            uv_offset: [0.0, 0.0],
+            rotation: 0.0,
+        }
+    }
     pub fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Instance>() as wgpu::BufferAddress,

@@ -1,4 +1,5 @@
 use crate::runtime::math::Float2;
+use crate::runtime::math::angle;
 use crate::runtime::phys::Aabb;
 use crate::runtime::phys::Shape;
 
@@ -6,7 +7,7 @@ use crate::runtime::phys::Shape;
 pub struct RigidBody {
     // ── Pose ──────────────────────────────────────────────────────────────────
     pub position: Float2,
-    pub angle: f32, // radians
+    pub rotation: f32, // radians
 
     // ── Velocity ──────────────────────────────────────────────────────────────
     pub velocity: Float2,
@@ -34,7 +35,7 @@ pub struct RigidBody {
 }
 
 impl RigidBody {
-    pub fn new(shape: Shape, mass: f32, pos: Float2) -> Self {
+    pub fn new(shape: Shape, mass: f32, pos: Float2, rotation: f32) -> Self {
         let (inv_mass, inv_inertia) = if mass <= 0.0 {
             (0.0, 0.0)
         } else {
@@ -43,7 +44,7 @@ impl RigidBody {
         };
         Self {
             position: pos,
-            angle: 0.0,
+            rotation: rotation,
             velocity: Float2::ZERO,
             angular_velocity: 0.0,
             inv_mass,
@@ -58,8 +59,8 @@ impl RigidBody {
     }
 
     /// Convenience: create a static (immovable) body.
-    pub fn new_static(shape: Shape, pos: Float2) -> Self {
-        let mut b = Self::new(shape, 0.0, pos);
+    pub fn new_static(shape: Shape, pos: Float2, rotation: f32) -> Self {
+        let mut b = Self::new(shape, 0.0, pos, rotation);
         b.is_static = true;
         b
     }
@@ -85,7 +86,7 @@ impl RigidBody {
     }
 
     pub fn aabb(&self) -> Aabb {
-        self.shape.aabb(self.position, self.angle)
+        self.shape.aabb(self.position, self.rotation)
     }
 
     pub fn integrate(&mut self, dt: f32, gravity: Float2) {
@@ -100,7 +101,7 @@ impl RigidBody {
 
         let alpha = self.torque * self.inv_inertia;
         self.angular_velocity += alpha * dt;
-        self.angle += self.angular_velocity * dt;
+        self.rotation += self.angular_velocity * dt;
 
         // Reset accumulators
         self.force = Float2::ZERO;

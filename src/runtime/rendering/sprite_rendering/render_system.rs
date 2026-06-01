@@ -26,8 +26,8 @@ impl SystemBase for RenderSystem {
                     renderer_lock.batches[sprite.batch_index].instances[sprite.index] = Instance {
                         position: transform.position.into(),
                         size: [1.0, 1.0],
-                        uv_offset: [0.0, 0.0],
-                        uv_scale: [1.0, 1.0],
+                        uv_offset: sprite.uv_offset,
+                        uv_scale: sprite.uv_scale,
                         rotation: transform.rotation,
                     };
                 }

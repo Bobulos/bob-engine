@@ -23,23 +23,6 @@ impl PhysicsSystem {
             snapshots: Vec::new(),
         }
     }
-
-    /// Spawn a physics-backed entity; Transform is synced from RigidBody.position.
-    pub fn spawn_body(&self, world: &Arc<DynamicWorld>, body: RigidBody) -> Entity {
-        let pos = body.position;
-        let angle = body.angle;
-        let entity = world.create_entity();
-        world.add_component(
-            entity,
-            Transform {
-                position: pos,
-                rotation: angle,
-            },
-        );
-        world.add_component(entity, body);
-        entity
-    }
-
     // ── Fixed-step sub-systems ────────────────────────────────────────────────
 
     fn integrate(&self, world: &Arc<DynamicWorld>, dt: f32) {
@@ -57,7 +40,7 @@ impl PhysicsSystem {
                 entity,
                 body.aabb(),
                 body.position,
-                body.angle,
+                body.rotation,
                 body.shape.clone(),
             ));
         });
@@ -236,7 +219,7 @@ impl PhysicsSystem {
     fn sync_transforms(&self, world: &Arc<DynamicWorld>) {
         world.for_each2_mut_both::<RigidBody, Transform>(|_e, body, transform| {
             transform.position = body.position;
-            transform.rotation = body.angle;
+            transform.rotation = body.rotation;
         });
     }
 
@@ -256,28 +239,7 @@ impl PhysicsSystem {
 }
 
 impl SystemBase for PhysicsSystem {
-    fn on_start(&mut self, world: &Arc<DynamicWorld>) {
-        // Ground plane (static)
-        let mut col = RigidBody::new_static(
-            Shape::Rect {
-                half_w: 3000.0,
-                half_h: 0.5,
-            },
-            Float2::new(0.0, -5.0),
-        );
-        col.angle = 0.0;
-        self.spawn_body(world, col);
-
-        let mut col = RigidBody::new_static(
-            Shape::Rect {
-                half_w: 20.0,
-                half_h: 0.5,
-            },
-            Float2::new(0.0, -5.0),
-        );
-        col.angle = 1.57079632679;
-        self.spawn_body(world, col);
-    }
+    fn on_start(&mut self, world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         self.step(world);

@@ -97,16 +97,7 @@ impl SpriteBatchAllocatorSystem {
             let mut renderer_lock = self.renderer.write().unwrap();
             renderer_lock.create_batch(
                 &bytes,
-                vec![
-                    Instance {
-                        position: [f32::MAX, f32::MAX],
-                        size: [1.0, 1.0],
-                        uv_scale: [1.0, 1.0],
-                        uv_offset: [0.0, 0.0],
-                        rotation: 0.0,
-                    };
-                    runtime::engine::SPRITE_BATCH_SIZE
-                ],
+                vec![Instance::default(); runtime::engine::SPRITE_BATCH_SIZE],
                 rendering::renderer::PipelineKey::Default,
             )
         };

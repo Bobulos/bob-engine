@@ -168,8 +168,6 @@ fn find_reference_face_index(verts: &[Float2], normal: Float2, count: usize) -> 
     }
     best_i
 }
-
-/// Rectangle vs Rectangle (SAT + Sutherland-Hodgman, up to 8 contacts, zero allocation).
 pub fn rect_rect(
     verts_a: &[Float2],
     verts_b: &[Float2],
@@ -178,64 +176,82 @@ pub fn rect_rect(
 ) -> Option<(Float2, f32, ContactManifold)> {
     let na = verts_a.len();
     let nb = verts_b.len();
+
     let mut min_depth = f32::MAX;
     let mut best_normal = Float2::ZERO;
+    let mut axis_from_a = true;
 
-    // SAT over all edge normals of both polygons.
+    // SAT
     for pass in 0..2 {
         let verts = if pass == 0 { verts_a } else { verts_b };
-        let n = if pass == 0 { na } else { nb };
-        for i in 0..n {
-            let edge = verts[(i + 1) % n] - verts[i];
+        let count = verts.len();
+
+        for i in 0..count {
+            let edge = verts[(i + 1) % count] - verts[i];
             let axis = Float2::new(-edge.y, edge.x).normalize();
+
             let (min_a, max_a) = project_polygon(verts_a, axis);
             let (min_b, max_b) = project_polygon(verts_b, axis);
+
             let overlap = sat_overlap(min_a, max_a, min_b, max_b)?;
+
             if overlap < min_depth {
                 min_depth = overlap;
                 best_normal = axis;
+                axis_from_a = pass == 0;
             }
         }
     }
 
-    // Ensure normal points A → B.
+    // Ensure normal points A -> B
     if (pos_b - pos_a).dot(best_normal) < 0.0 {
         best_normal = -best_normal;
     }
 
-    // Reference face on A, incident face on B.
-    let ref_i = find_reference_face_index(verts_a, best_normal, na);
-    let inc_i = find_incident_face_index(verts_b, best_normal, nb);
+    let (reference_poly, incident_poly, reference_count, incident_count, reference_normal) =
+        if axis_from_a {
+            (verts_a, verts_b, na, nb, best_normal)
+        } else {
+            (verts_b, verts_a, nb, na, -best_normal)
+        };
 
-    // Incident face as a 2-point subject for clipping.
-    let incident = [verts_b[inc_i], verts_b[(inc_i + 1) % nb]];
+    let ref_face = find_reference_face_index(reference_poly, reference_normal, reference_count);
 
-    // Clip incident face against all edges of verts_a.
-    let clipped = sutherland_hodgman(&incident, 2, verts_a, na);
+    let inc_face = find_incident_face_index(incident_poly, reference_normal, incident_count);
 
-    // Depth-filter: keep only points behind the reference face plane.
-    let ref_face_normal = {
-        let e = verts_a[(ref_i + 1) % na] - verts_a[ref_i];
-        Float2::new(-e.y, e.x).normalize()
-    };
-    let ref_d = ref_face_normal.dot(verts_a[ref_i]);
+    let incident = [
+        incident_poly[inc_face],
+        incident_poly[(inc_face + 1) % incident_count],
+    ];
+
+    let clipped = sutherland_hodgman(&incident, 2, reference_poly, reference_count);
+
+    let ref_v0 = reference_poly[ref_face];
+    let ref_v1 = reference_poly[(ref_face + 1) % reference_count];
+
+    let edge = ref_v1 - ref_v0;
+    let face_normal = Float2::new(-edge.y, edge.x).normalize();
+
+    let plane_d = face_normal.dot(ref_v0);
 
     let mut contacts = ContactManifold::new();
+
     for i in 0..clipped.count {
         let p = clipped.points[i];
-        if ref_face_normal.dot(p) <= ref_d + 1e-4 {
+
+        if face_normal.dot(p) <= plane_d + 1e-4 {
             contacts.push(p);
         }
     }
 
+    // Fallback if clipping failed.
     if contacts.count == 0 {
-        return None;
+        contacts.push((pos_a + pos_b) * 0.5);
     }
 
     Some((best_normal, min_depth, contacts))
 }
-
-/// Circle vs Rectangle (SAT, single contact, zero allocation).
+/// Circle vs Rectangle
 pub fn circle_rect(
     circle_pos: Float2,
     radius: f32,
