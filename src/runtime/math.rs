@@ -4,4 +4,3 @@ pub mod rng;
 
 pub use angle::*;
 pub use float2::Float2;
-pub use rng::*;

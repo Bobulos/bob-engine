@@ -239,7 +239,7 @@ impl PhysicsSystem {
 }
 
 impl SystemBase for PhysicsSystem {
-    fn on_start(&mut self, world: &Arc<DynamicWorld>) {}
+    fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         self.step(world);

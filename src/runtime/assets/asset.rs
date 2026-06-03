@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct Asset {
     pub hash: u64,
     pub path: String,

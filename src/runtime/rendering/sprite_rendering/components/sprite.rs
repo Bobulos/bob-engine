@@ -1,9 +1,15 @@
+use crate::runtime::assets::AssetHandle;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Sprite {
-    pub batch_index: usize, // Index into Renderer.batches
-    pub index: usize,       // Index into the batch
+    pub batch_index: usize,
+    /// Index into Renderer.batches
+    pub index: usize,
+    /// Index into the batch
     //pub enabled: bool,          // Whether this sprite should be rendered
-    pub atlas_id: usize, // ID to look up in TextureCache
+    /// Asset handle to get data
+    pub atlas_handle: AssetHandle, // ID to look up in TextureCache
+
     pub width: u32,
     pub height: u32,
     pub visible: bool,
@@ -15,7 +21,7 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(
-        atlas_id: usize,
+        atlas_handle: AssetHandle,
         width: u32,
         height: u32,
         visible: bool,
@@ -26,7 +32,7 @@ impl Sprite {
             batch_index: 0, // Will be set later when the sprite is added to a batch
             index: usize::MAX,
             //enabled: true,
-            atlas_id,
+            atlas_handle,
             width,
             height,
             visible,

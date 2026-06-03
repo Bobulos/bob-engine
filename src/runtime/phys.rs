@@ -10,6 +10,5 @@ pub mod shape;
 pub use aabb::Aabb;
 pub use contact_manifold::ContactManifold;
 pub use manifold::Manifold;
-pub use physics_config::PhysicsConfig;
 pub use rigidbody::RigidBody;
 pub use shape::Shape;

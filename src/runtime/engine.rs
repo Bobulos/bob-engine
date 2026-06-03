@@ -1,5 +1,5 @@
 use crate::runtime::Input;
-use crate::runtime::assets::{Asset, AssetEmbedded, AssetStore};
+use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
@@ -7,8 +7,7 @@ use crate::runtime::ecs::system_group::SystemGroupThreading;
 use crate::runtime::rendering;
 use crate::runtime::rendering::Renderer;
 
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 use std::time::Instant;
 pub struct Engine {
@@ -17,7 +16,7 @@ pub struct Engine {
     pub input: Arc<RwLock<Input>>,
     pub entities: Entities,
     // Assets
-    pub asset_store: AssetStore,
+    pub asset_store: Arc<OnceLock<AssetStore>>,
 }
 
 pub const MAIN_WORLD: &str = "main";
@@ -25,12 +24,12 @@ pub const RENDER_GROUP: &str = "render_group";
 pub const PHYSICS_GROUP: &str = "physics_group";
 pub const SPRITE_BATCH_SIZE: usize = 1024 * 4; // 2^10
 pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
-pub const INCLUDE_ATLAS: &[&str] = &[
-    "tree.png",
-    "Tux.png",
-    "exp/ship_parts_s.png",
-    "exp/projectiles_m.png",
-];
+// pub const INCLUDE_ATLAS: &[&str] = &[
+//     "tree.png",
+//     "Tux.png",
+//     "exp/ship_parts_s.png",
+//     "exp/projectiles_m.png",
+// ];
 impl Engine {
     pub fn new(renderer: Renderer) -> Self {
         Self {
@@ -38,12 +37,14 @@ impl Engine {
             renderer: Arc::new(RwLock::new(renderer)),
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
-            asset_store: AssetStore::new(),
+            asset_store: Arc::new(OnceLock::new()),
         }
     }
 
     pub fn init(&mut self) {
-        self.asset_store.init();
+        let mut asset_store = AssetStore::new();
+        asset_store.init();
+        self.asset_store.set(asset_store).expect("One lock sucks");
         self.setup_world();
         self.setup_renderer();
         self.setup_systems();
@@ -99,6 +100,7 @@ impl Engine {
         let queue = renderer.queue();
         renderer.tilemaps[trees].flush_position(queue);
     }
+
     fn setup_systems(&mut self) {
         println!("Initializing system groups");
 
@@ -226,7 +228,12 @@ impl Engine {
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
         );
         let group = self.entities.get_system_group_mut("test_group").unwrap();
-        group.register_system(Box::new(crate::test::test_system::TestSystem::new()), 0);
+        group.register_system(
+            Box::new(crate::test::test_system::TestSystem::new(Arc::clone(
+                &self.asset_store,
+            ))),
+            0,
+        );
     }
     fn setup_rendering(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();

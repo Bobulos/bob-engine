@@ -1,28 +1,31 @@
+use crate::runtime::assets::Asset;
 use crate::runtime::assets::AssetEmbedded;
+use crate::runtime::assets::AssetHandle;
+use crate::runtime::assets::AssetStore;
 use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use crate::runtime::rendering::{Instance, Renderer};
 use crate::runtime::{self, rendering};
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 pub const MAX_ATLASES: usize = 32;
 const UNASSIGNED: usize = usize::MAX;
 
 pub struct SpriteBatchAllocatorSystem {
+    asset_store: Arc<OnceLock<AssetStore>>,
+
     pub renderer: Arc<RwLock<Renderer>>,
-    pub atlas_data: HashMap<&'static str, Vec<u8>>,
+
     /// List of batch IDs per atlas (can grow as batches fill up)
     atlas_batches: Vec<Vec<usize>>,
     /// Next free instance slot per batch per atlas: atlas_next_slot[atlas_id][batch_idx]
     atlas_next_slot: Vec<Vec<usize>>,
-    /// Maps atlas index -> asset name, for re-creating batches on overflow
-    atlas_index_to_name: Vec<&'static str>,
 }
 
 impl SpriteBatchAllocatorSystem {
-    pub fn new(renderer: Arc<RwLock<Renderer>>, included_atlases: Vec<&'static str>) -> Self {
+    pub fn new(renderer: Arc<RwLock<Renderer>>, asset_store: Arc<OnceLock<AssetStore>>) -> Self {
         let mut atlas_data: HashMap<&'static str, Vec<u8>> = HashMap::new();
         let mut atlas_batches: Vec<Vec<usize>> = Vec::with_capacity(MAX_ATLASES);
         let mut atlas_next_slot: Vec<Vec<usize>> = Vec::with_capacity(MAX_ATLASES);
@@ -115,7 +118,7 @@ impl SystemBase for SpriteBatchAllocatorSystem {
         let mut pending: Vec<(Entity, usize)> = Vec::new();
         world.for_each_mut::<Sprite>(|entity: Entity, sprite: &mut Sprite| {
             if sprite.index == UNASSIGNED {
-                pending.push((entity, sprite.atlas_id as usize));
+                pending.push((entity, sprite.atlas_handle.0 as usize));
             }
         });
 
