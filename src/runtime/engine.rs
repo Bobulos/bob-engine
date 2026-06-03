@@ -1,5 +1,5 @@
 use crate::runtime::Input;
-use crate::runtime::asset_management::Asset;
+use crate::runtime::assets::{Asset, AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
@@ -16,6 +16,8 @@ pub struct Engine {
     pub renderer: Arc<RwLock<Renderer>>,
     pub input: Arc<RwLock<Input>>,
     pub entities: Entities,
+    // Assets
+    pub asset_store: AssetStore,
 }
 
 pub const MAIN_WORLD: &str = "main";
@@ -30,29 +32,22 @@ pub const INCLUDE_ATLAS: &[&str] = &[
     "exp/projectiles_m.png",
 ];
 impl Engine {
-    // We take a mutable reference because the engine will need
-    // to tell the renderer to clear/present/draw.s
     pub fn new(renderer: Renderer) -> Self {
         Self {
             frame_count: 0,
             renderer: Arc::new(RwLock::new(renderer)),
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
+            asset_store: AssetStore::new(),
         }
     }
 
     pub fn init(&mut self) {
-        self.debug_list_assets();
+        self.asset_store.init();
         self.setup_world();
         self.setup_renderer();
         self.setup_systems();
         println!("Engine initialized");
-    }
-
-    fn debug_list_assets(&self) {
-        for file in Asset::iter() {
-            println!("{}", file.as_ref());
-        }
     }
 
     fn setup_world(&mut self) {
@@ -72,9 +67,9 @@ impl Engine {
 
     fn setup_tilemap(&mut self) {
         let tilemap = [0u8; 64 * 64];
-        let file = Asset::get("grass.png").unwrap();
+        let file = AssetEmbedded::get("grass.png").unwrap();
         let bytes: &[u8] = &file.data;
-        let test = Asset::get("test.png").unwrap();
+        let test = AssetEmbedded::get("test.png").unwrap();
         let test_bytes: &[u8] = &test.data;
         // Acquire the lock once to do all tilemap work — avoids the deadlock
         // that occurs when holding a write guard and calling .queue() via a

@@ -1,4 +1,4 @@
-pub mod asset_management;
+pub mod assets;
 pub mod ecs;
 pub mod engine;
 pub mod input;

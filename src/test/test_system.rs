@@ -45,8 +45,8 @@ impl SystemBase for TestSystem {
         }
 
         // Random debris
-        for y in -10..10 {
-            for x in -40..40 {
+        for y in 10..20 {
+            for x in 10..20 {
                 let x = (x * 4) as f32;
                 let y = (y * 4) as f32;
                 let e = world.create_entity();
@@ -60,7 +60,7 @@ impl SystemBase for TestSystem {
                 );
                 world.add_component(
                     e,
-                    Sprite::new(2, 32, 32, true, [2.0 / 3.0, 0.0], [1.0 / 3.0, 1.0]),
+                    Sprite::new(2, 32, 32, true, [2.0 / 4.0, 0.0], [1.0 / 4.0, 1.0]),
                 );
 
                 let mut rb = crate::runtime::phys::RigidBody::new(
@@ -79,7 +79,7 @@ impl SystemBase for TestSystem {
             }
         }
         for y in -10..10 {
-            for x in -40..40 {
+            for x in -10..10 {
                 let x = (x * 4) as f32;
                 let y = ((y + 1) * 4) as f32;
                 let e = world.create_entity();
@@ -93,7 +93,7 @@ impl SystemBase for TestSystem {
                 );
                 world.add_component(
                     e,
-                    Sprite::new(2, 32, 32, true, [1.0 / 3.0, 0.0], [1.0 / 3.0, 1.0]),
+                    Sprite::new(2, 32, 32, true, [1.0 / 4.0, 0.0], [1.0 / 4.0, 1.0]),
                 );
 
                 let mut rb = crate::runtime::phys::RigidBody::new(

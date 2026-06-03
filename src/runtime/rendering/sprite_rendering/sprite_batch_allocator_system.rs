@@ -1,4 +1,4 @@
-use crate::runtime::asset_management::Asset;
+use crate::runtime::assets::AssetEmbedded;
 use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
@@ -29,7 +29,7 @@ impl SpriteBatchAllocatorSystem {
         let mut atlas_index_to_name: Vec<&'static str> = Vec::with_capacity(MAX_ATLASES);
 
         for asset_name in included_atlases.iter() {
-            let asset = Asset::get(asset_name);
+            let asset = AssetEmbedded::get(asset_name);
             if let Some(file) = asset {
                 let bytes: &[u8] = &file.data;
                 let mut renderer_lock = renderer.write().unwrap();
