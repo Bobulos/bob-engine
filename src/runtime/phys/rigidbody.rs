@@ -4,32 +4,32 @@ use crate::runtime::phys::Shape;
 
 #[derive(Debug, Clone)]
 pub struct RigidBody {
-    // ── Pose ──────────────────────────────────────────────────────────────────
+    // Pose
     pub position: Float2,
     pub rotation: f32, // radians
 
-    // ── Velocity ──────────────────────────────────────────────────────────────
+    // Velocity
     pub velocity: Float2,
     pub angular_velocity: f32, // radians / s
 
-    // ── Mass properties ───────────────────────────────────────────────────────
+    // Mass properties
     /// Inverse mass (0 = static / infinite mass).
     pub inv_mass: f32,
     /// Inverse moment of inertia (0 = static).
     pub inv_inertia: f32,
 
-    // ── Material ──────────────────────────────────────────────────────────────
+    // Material
     pub restitution: f32, // 0 = perfectly inelastic, 1 = perfectly elastic
     pub friction: f32,    // Coulomb friction coefficient
 
-    // ── Shape ─────────────────────────────────────────────────────────────────
+    // Shape
     pub shape: Shape,
 
-    // ── Accumulated forces (reset each frame) ─────────────────────────────────
+    // Accumulated forces (reset each frame)
     force: Float2,
     torque: f32,
 
-    // ── Flags ─────────────────────────────────────────────────────────────────
+    // Flags
     pub is_static: bool,
 }
 
@@ -57,7 +57,6 @@ impl RigidBody {
         }
     }
 
-    /// Convenience: create a static (immovable) body.
     pub fn new_static(shape: Shape, pos: Float2, rotation: f32) -> Self {
         let mut b = Self::new(shape, 0.0, pos, rotation);
         b.is_static = true;

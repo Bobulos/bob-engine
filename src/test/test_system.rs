@@ -1,5 +1,5 @@
 use crate::runtime::assets::AssetHandle;
-use crate::runtime::assets::{Asset, AssetStore};
+use crate::runtime::assets::AssetStore;
 use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{self, Float2};

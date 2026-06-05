@@ -23,7 +23,7 @@ impl PhysicsSystem {
             snapshots: Vec::new(),
         }
     }
-    // ── Fixed-step sub-systems ────────────────────────────────────────────────
+    // Fixed-step sub-systems
 
     fn integrate(&self, world: &Arc<DynamicWorld>, dt: f32) {
         let g = self.config.gravity;
