@@ -1,6 +1,7 @@
 use crate::runtime::Engine;
+use crate::runtime::assets::AssetStore;
 use crate::runtime::rendering;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalSize, Size};
 use winit::event::WindowEvent;
@@ -32,11 +33,12 @@ impl ApplicationHandler for App {
                 WINDOW_SIZE.1,
             ))));
             //attributes.fullscreen = Some(Fullscreen::Borderless(None));
-
+            let asset_store = Arc::new(OnceLock::new());
+            asset_store.set(AssetStore::new().init()).unwrap();
             let window = Arc::new(event_loop.create_window(attributes).unwrap());
 
             let mut renderer = rendering::Renderer::new();
-            pollster::block_on(renderer.init(Arc::clone(&window)));
+            pollster::block_on(renderer.init_window(Arc::clone(&window)));
 
             let mut engine = Engine::new(renderer);
             engine.init(); // Setup ECS, etc.

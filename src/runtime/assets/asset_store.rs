@@ -25,8 +25,8 @@ impl AssetStore {
             path_to_hash: HashMap::new(),
         }
     }
-    pub fn get_asset_by_idx(&self, idx: usize) -> Option<&Asset> {
-        self.assets.get(idx)
+    pub fn get_asset_by_handle(&self, idx: AssetHandle) -> Option<&Asset> {
+        self.assets.get(idx.0)
     }
     pub fn get_asset_idx(&self, hash: u64) -> Option<AssetHandle> {
         self.asset_handles.get(&hash).copied()

@@ -45,6 +45,10 @@ impl Engine {
         let mut asset_store = AssetStore::new();
         asset_store.init();
         self.asset_store.set(asset_store).expect("One lock sucks");
+        self.renderer
+            .write()
+            .unwrap()
+            .init(self.asset_store.clone());
         self.setup_world();
         self.setup_renderer();
         self.setup_systems();
@@ -254,8 +258,7 @@ impl Engine {
         let _rendering_system = group.register_system(
             Box::new(
                 rendering::sprite_rendering::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
-                    Arc::clone(&self.renderer),
-                    INCLUDE_ATLAS.to_vec(),
+                    Arc::clone(&self.renderer)
                 ),
             ),
             i32::MIN,

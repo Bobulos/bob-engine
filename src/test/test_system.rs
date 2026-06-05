@@ -11,12 +11,14 @@ use std::sync::{Arc, OnceLock};
 pub struct TestSystem {
     asset_store: Arc<OnceLock<AssetStore>>,
     sprite_handle: Option<AssetHandle>,
+    other_handle: Option<AssetHandle>,
 }
 impl TestSystem {
     pub fn new(asset_store: Arc<OnceLock<AssetStore>>) -> Self {
         Self {
             asset_store,
             sprite_handle: None,
+            other_handle: None,
         }
     }
 }
@@ -24,13 +26,21 @@ impl SystemBase for TestSystem {
     fn on_start(&mut self, world: &Arc<DynamicWorld>) {
         if let Some(asset_store) = self.asset_store.get() {
             self.sprite_handle = asset_store.get_asset_idx_by_path("exp/ship_parts_s.png");
+            self.other_handle = asset_store.get_asset_idx_by_path("exp/projectiles_m.png");
         }
 
         let targ = Float2::new(0.0, 0.0);
 
         if let Some(sprite_handle) = self.sprite_handle {
-            let sprite_cmpt = Sprite::new(sprite_handle, 32, 32, true, [0.5, 0.0], [0.5, 1.0]);
-
+            let sprite_cmpt = Sprite::new(sprite_handle, 32, 32, true, [0.5, 0.0], [0.25, 1.0]);
+            let other_cmpt = Sprite::new(
+                self.other_handle.unwrap(),
+                32,
+                32,
+                true,
+                [0.5, 0.0],
+                [0.5, 1.0],
+            );
             for _ in 0..1000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
@@ -45,7 +55,7 @@ impl SystemBase for TestSystem {
                         rotation: rot,
                     },
                 );
-                world.add_component(e, sprite_cmpt.clone());
+                world.add_component(e, other_cmpt.clone());
                 let mut rb = crate::runtime::phys::RigidBody::new(
                     crate::runtime::phys::Shape::Circle { radius: 0.5 },
                     100.0,
@@ -57,8 +67,8 @@ impl SystemBase for TestSystem {
                 world.add_component(e, rb);
             }
             // Random debris
-            for y in 10..20 {
-                for x in 10..20 {
+            for y in 10..40 {
+                for x in 10..200 {
                     let x = (x * 4) as f32;
                     let y = (y * 4) as f32;
                     let e = world.create_entity();

@@ -1,3 +1,4 @@
+use crate::runtime::assets::{Asset, AssetHandle, AssetStore};
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::instance::Instance;
@@ -5,6 +6,7 @@ use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::OnceLock;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
@@ -53,6 +55,7 @@ pub struct Renderer {
     pipeline: Option<wgpu::RenderPipeline>,
     bind_group_layout: Option<wgpu::BindGroupLayout>,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
+
     // ── shared geometry ───────────────────────────────────────────────────────
     vertex_buffer: Option<wgpu::Buffer>,
     index_buffer: Option<wgpu::Buffer>,
@@ -67,6 +70,12 @@ pub struct Renderer {
 
     // ── tilemap ───────────────────────────────────────────────────────────────
     pub tilemaps: Vec<rendering::TilemapRenderer>,
+
+    // ── asset store ────────────────────────────────────────────────────────────
+    asset_store: Option<Arc<OnceLock<AssetStore>>>,
+
+    // ── window ─────────────────────────────────────────────────────────────────
+    pub size: winit::dpi::PhysicalSize<u32>,
 }
 
 impl Renderer {
@@ -86,8 +95,10 @@ impl Renderer {
             num_indices: 0,
             camera: Camera::new(1080, 720),
             camera_buffer: None,
+            asset_store: None,
             tilemaps: Vec::new(),
             batches: Vec::new(),
+            size: winit::dpi::PhysicalSize::new(240, 120),
         }
     }
     fn build_pipeline(&self, config: &PipelineConfig) -> wgpu::RenderPipeline {
@@ -142,12 +153,15 @@ impl Renderer {
 
     // ── Public API ────────────────────────────────────────────────────────────
 
-    pub async fn init(&mut self, window: Arc<Window>) {
-        let size = window.inner_size();
-        self.camera.zoom = 1.0;
+    pub async fn init_window(&mut self, window: Arc<Window>) {
+        self.size = window.inner_size();
         self.init_surface_and_device(window).await;
+    }
+    pub fn init(&mut self, asset_store: Arc<OnceLock<AssetStore>>) {
+        self.asset_store = Some(asset_store);
+        self.camera.zoom = 1.0;
         self.init_geometry();
-        self.init_pipeline(size);
+        self.init_pipeline(self.size);
         self.init_camera();
     }
 
@@ -205,14 +219,26 @@ impl Renderer {
         self.tilemaps.push(tilemap);
         self.tilemaps.len() - 1
     }
-    /// Creates a new batch from raw PNG bytes and an initial instance list.
+    /// Creates a new batch from an asset handle and an initial instance list.
     /// Returns the batch index for later access via `renderer.batches[idx]`.
     pub fn create_batch(
         &mut self,
-        tex_bytes: &[u8],
+        asset_handle: AssetHandle,
         instances: Vec<Instance>,
         pipeline_key: PipelineKey,
     ) -> usize {
+        // :(
+        let tex_bytes = self
+            .asset_store
+            .as_ref()
+            .unwrap()
+            .get()
+            .unwrap()
+            .get_asset_by_handle(asset_handle)
+            .unwrap()
+            .data
+            .as_ref()
+            .unwrap();
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
 

@@ -8,7 +8,7 @@ pub struct Sprite {
     /// Index into the batch
     //pub enabled: bool,          // Whether this sprite should be rendered
     /// Asset handle to get data
-    pub atlas_handle: AssetHandle, // ID to look up in TextureCache
+    pub asset_handle: AssetHandle, // ID to look up in TextureCache
 
     pub width: u32,
     pub height: u32,
@@ -21,7 +21,7 @@ pub struct Sprite {
 
 impl Sprite {
     pub fn new(
-        atlas_handle: AssetHandle,
+        asset_handle: AssetHandle,
         width: u32,
         height: u32,
         visible: bool,
@@ -32,7 +32,7 @@ impl Sprite {
             batch_index: 0, // Will be set later when the sprite is added to a batch
             index: usize::MAX,
             //enabled: true,
-            atlas_handle,
+            asset_handle,
             width,
             height,
             visible,
