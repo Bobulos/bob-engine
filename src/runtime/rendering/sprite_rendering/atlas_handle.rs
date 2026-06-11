@@ -1,4 +1,3 @@
-use crate::runtime::assets::AssetHandle;
 #[derive(Debug, Clone, PartialEq)]
 /// Stores the renderer's batch index for a given atlas.
 pub struct AtlasHandle(pub usize);

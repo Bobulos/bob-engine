@@ -3,6 +3,84 @@ use crate::runtime::phys::Aabb;
 use crate::runtime::phys::Shape;
 
 #[derive(Debug, Clone)]
+pub struct PhysicsTransform {
+    pub position: Float2,
+    pub rotation: f32, // radians
+}
+
+#[derive(Debug, Clone)]
+pub struct PhysicsVelocity {
+    pub velocity: Float2,
+    pub angular_velocity: f32, // radians / s
+}
+#[derive(Debug, Clone)]
+pub struct PhysicsMass {
+    pub inv_mass: f32,
+    pub inv_inertia: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct PhysicsForce {
+    pub force: Float2,
+    pub torque: f32,
+}
+#[derive(Debug, Clone)]
+pub struct PhysicsMaterial {
+    pub restitution: f32, // 0 = perfectly inelastic, 1 = perfectly elastic
+    pub friction: f32,    // Coulomb friction coefficient
+}
+#[derive(Debug, Clone)]
+pub struct PhysicsFlags {
+    pub is_static: bool,
+}
+#[derive(Debug, Clone)]
+pub struct PhysicsShape {
+    pub shape: Shape,
+}
+
+pub fn apply_impulse(
+    physics_mass: &PhysicsMass,
+    physics_velocity: &mut PhysicsVelocity,
+    impulse: Float2,
+    r: Float2,
+) {
+    physics_velocity.velocity += impulse * physics_mass.inv_mass;
+    physics_velocity.angular_velocity += r.cross(impulse) * physics_mass.inv_inertia;
+}
+
+/// Velocity of a point fixed to this body at PhysicsWorld-space offset `r`.
+pub fn velocity_at(physics_velocity: &PhysicsVelocity, r: Float2) -> Float2 {
+    physics_velocity.velocity + Float2::cross_scalar_vec(physics_velocity.angular_velocity, r)
+}
+
+pub fn aabb(physics_shape: &PhysicsShape, physics_transform: &PhysicsTransform) -> Aabb {
+    physics_shape
+        .shape
+        .aabb(physics_transform.position, physics_transform.rotation)
+}
+
+pub fn integrate(&mut self, dt: f32, gravity: Float2) {
+    // Add if i need later
+
+    // if self.is_static {
+    //     return;
+    // }
+
+    // Semi-implicit Euler integration
+    let accel = self.force * self.inv_mass + gravity;
+    self.velocity += accel * dt;
+    self.position += self.velocity * dt;
+
+    let alpha = self.torque * self.inv_inertia;
+    self.angular_velocity += alpha * dt;
+    self.rotation += self.angular_velocity * dt;
+
+    // Reset accumulators
+    self.force = Float2::ZERO;
+    self.torque = 0.0;
+}
+
+#[derive(Debug, Clone)]
 pub struct RigidBody {
     // Pose
     pub position: Float2,
