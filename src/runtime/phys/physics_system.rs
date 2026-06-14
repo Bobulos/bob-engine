@@ -4,6 +4,10 @@ use crate::runtime::math::Float2;
 use crate::runtime::phys::ContactManifold;
 use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
 use crate::runtime::phys::physics_config::PhysicsConfig;
+pub use crate::runtime::phys::rigidbody;
+use crate::runtime::phys::rigidbody::{
+    PhysicsForce, PhysicsMass, PhysicsTransform, PhysicsVelocity,
+};
 pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
 use std::sync::Arc;
 
@@ -27,9 +31,14 @@ impl PhysicsSystem {
 
     fn integrate(&self, world: &Arc<DynamicWorld>, dt: f32) {
         let g = self.config.gravity;
-        world.for_each_mut::<RigidBody>(|_e, body| {
-            body.integrate(dt, g);
-        });
+        world.for_each4_mut_all::<PhysicsVelocity, PhysicsForce, PhysicsMass, PhysicsTransform>(
+            |_e, velocity, force, mass, phys_transform| {
+                rigidbody::integrate(velocity, force, mass, phys_transform, Float2::ZERO);
+            },
+        );
+        // world.for_each_mut::<RigidBody>(|_e, body| {
+        //     body.integrate(dt, g);
+        // });
     }
 
     /// Collect all (Entity, snapshot) pairs for broad + narrow phase.

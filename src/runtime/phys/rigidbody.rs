@@ -2,12 +2,13 @@ use crate::runtime::math::Float2;
 use crate::runtime::phys::Aabb;
 use crate::runtime::phys::Shape;
 
+const FIXED_DT: f32 = 1.0 / 60.0;
+
 #[derive(Debug, Clone)]
 pub struct PhysicsTransform {
     pub position: Float2,
     pub rotation: f32, // radians
 }
-
 #[derive(Debug, Clone)]
 pub struct PhysicsVelocity {
     pub velocity: Float2,
@@ -18,7 +19,6 @@ pub struct PhysicsMass {
     pub inv_mass: f32,
     pub inv_inertia: f32,
 }
-
 #[derive(Debug, Clone)]
 pub struct PhysicsForce {
     pub force: Float2,
@@ -59,25 +59,30 @@ pub fn aabb(physics_shape: &PhysicsShape, physics_transform: &PhysicsTransform) 
         .aabb(physics_transform.position, physics_transform.rotation)
 }
 
-pub fn integrate(&mut self, dt: f32, gravity: Float2) {
+pub fn integrate(
+    velocity: &mut PhysicsVelocity,
+    force: &mut PhysicsForce,
+    mass: &PhysicsMass,
+    phys_transform: &mut PhysicsTransform,
+    gravity: Float2,
+) {
     // Add if i need later
 
     // if self.is_static {
     //     return;
     // }
-
     // Semi-implicit Euler integration
-    let accel = self.force * self.inv_mass + gravity;
-    self.velocity += accel * dt;
-    self.position += self.velocity * dt;
+    let accel = force.force * mass.inv_mass + gravity;
+    velocity.velocity += accel * FIXED_DT;
+    phys_transform.position += velocity.velocity * FIXED_DT;
 
-    let alpha = self.torque * self.inv_inertia;
-    self.angular_velocity += alpha * dt;
-    self.rotation += self.angular_velocity * dt;
+    let alpha = force.torque * mass.inv_inertia;
+    velocity.angular_velocity += alpha * FIXED_DT;
+    phys_transform.rotation += velocity.angular_velocity * FIXED_DT;
 
     // Reset accumulators
-    self.force = Float2::ZERO;
-    self.torque = 0.0;
+    force.force = Float2::ZERO;
+    force.torque = 0.0;
 }
 
 #[derive(Debug, Clone)]
@@ -150,7 +155,6 @@ impl RigidBody {
         let r = physics_world_point - self.position;
         self.torque += r.cross(f);
     }
-
     pub fn apply_impulse(&mut self, impulse: Float2, r: Float2) {
         self.velocity += impulse * self.inv_mass;
         self.angular_velocity += r.cross(impulse) * self.inv_inertia;
