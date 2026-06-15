@@ -3,8 +3,10 @@ use crate::runtime::math::Float2;
 
 #[derive(Debug, Clone)]
 pub struct Manifold {
-    pub body_a: Entity,
-    pub body_b: Entity,
+    /// Points to body in the snapshot stack
+    pub body_a: usize,
+    /// Points to body in the snapshot stack
+    pub body_b: usize,
     pub normal: Float2,
     pub depth: f32,
     pub contacts: [Float2; 8],

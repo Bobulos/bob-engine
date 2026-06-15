@@ -6,15 +6,28 @@ use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
 use crate::runtime::phys::physics_config::PhysicsConfig;
 pub use crate::runtime::phys::rigidbody;
 use crate::runtime::phys::rigidbody::{
-    PhysicsForce, PhysicsMass, PhysicsTransform, PhysicsVelocity,
+    PhysicsFlags, PhysicsForce, PhysicsMass, PhysicsMaterial, PhysicsShape, PhysicsTransform,
+    PhysicsVelocity,
 };
-pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
+pub use crate::runtime::phys::{Aabb, Manifold, Shape};
 use std::sync::Arc;
 
 pub struct PhysicsSystem {
     pub config: PhysicsConfig,
     manifolds: Vec<Manifold>,
-    snapshots: Vec<(Entity, Aabb, Float2, f32, Shape)>,
+
+    entity_snap: Vec<Entity>,
+    pos_snap: Vec<Float2>,
+    rot_snap: Vec<f32>,
+    vel_snap: Vec<Float2>,
+    ang_vel_snap: Vec<f32>,
+    force_snap: Vec<Float2>,
+    torque_snap: Vec<f32>,
+    rest_snap: Vec<f32>,
+    frict_snap: Vec<f32>,
+    inv_mass_snap: Vec<f32>,
+    inv_inertia_snap: Vec<f32>,
+    shape_snap: Vec<Shape>,
 }
 
 const FIXED_DT: f32 = 1.0 / 60.0;
@@ -24,44 +37,72 @@ impl PhysicsSystem {
         Self {
             config: PhysicsConfig::default(),
             manifolds: Vec::new(),
-            snapshots: Vec::new(),
+
+            entity_snap: Vec::new(),
+            pos_snap: Vec::new(),
+            rot_snap: Vec::new(),
+            vel_snap: Vec::new(),
+            ang_vel_snap: Vec::new(),
+            force_snap: Vec::new(),
+            torque_snap: Vec::new(),
+            rest_snap: Vec::new(),
+            frict_snap: Vec::new(),
+            inv_mass_snap: Vec::new(),
+            inv_inertia_snap: Vec::new(),
+            shape_snap: Vec::new(),
         }
     }
     //Fixed-step sub-systems
 
-    fn integrate(&self, world: &Arc<DynamicWorld>, dt: f32) {
+    fn integrate(&self, world: &Arc<DynamicWorld>) {
         let g = self.config.gravity;
         world.for_each4_mut_all::<PhysicsVelocity, PhysicsForce, PhysicsMass, PhysicsTransform>(
             |_e, velocity, force, mass, phys_transform| {
                 rigidbody::integrate(velocity, force, mass, phys_transform, Float2::ZERO);
             },
         );
-        // world.for_each_mut::<RigidBody>(|_e, body| {
-        //     body.integrate(dt, g);
-        // });
     }
 
     /// Collect all (Entity, snapshot) pairs for broad + narrow phase.
     fn collect_snapshots(&mut self, world: &Arc<DynamicWorld>) {
-        self.snapshots.clear();
-        world.for_each::<RigidBody>(|entity, body| {
-            self.snapshots.push((
-                entity,
-                body.aabb(),
-                body.position,
-                body.rotation,
-                body.shape.clone(),
-            ));
-        });
+        self.clear_snapshots();
+        world
+            .for_each7::<PhysicsTransform, PhysicsVelocity, PhysicsMass, PhysicsForce, PhysicsMaterial, PhysicsShape, PhysicsFlags>(
+                |entity, transform, velocity, mass, force, mat, shape, flags| {
+                    // Push all the snapshots
+                    self.entity_snap.push(entity);
+                    self.pos_snap.push(transform.position);
+                    self.rot_snap.push(transform.rotation);
+                    self.vel_snap.push(velocity.velocity);
+                    self.ang_vel_snap.push(velocity.angular_velocity);
+                    self.force_snap.push(force.force);
+                    self.torque_snap.push(force.torque);
+                    self.rest_snap.push(mat.restitution);
+                    self.frict_snap.push(mat.friction);
+                    self.inv_mass_snap.push(mass.inv_mass);
+                    self.inv_inertia_snap.push(mass.inv_inertia);
+                    self.shape_snap.push(shape.shape.clone());
+                },
+            );
     }
 
     fn build_manifolds(&mut self, _world: &Arc<DynamicWorld>) {
         self.manifolds.clear();
-        let n = self.snapshots.len();
+        let n = self.rot_snap.len();
         for i in 0..n {
             for j in (i + 1)..n {
-                let (ea, aabb_a, pos_a, angle_a, ref shape_a) = self.snapshots[i];
-                let (eb, aabb_b, pos_b, angle_b, ref shape_b) = self.snapshots[j];
+                let (aabb_a, pos_a, angle_a, ref shape_a) = (
+                    self.aabb_snap[i],
+                    self.pos_snap[i],
+                    self.rot_snap[i],
+                    &self.shape_snap[i],
+                );
+                let (aabb_b, pos_b, angle_b, ref shape_b) = (
+                    self.aabb_snap[j],
+                    self.pos_snap[j],
+                    self.rot_snap[j],
+                    &self.shape_snap[j],
+                );
 
                 // Broad phase
                 if !aabb_a.overlaps(aabb_b) {
@@ -90,8 +131,8 @@ impl PhysicsSystem {
 
                 if let Some((normal, depth, contact_manifold)) = result {
                     self.manifolds.push(Manifold {
-                        body_a: ea,
-                        body_b: eb,
+                        body_a: i,
+                        body_b: j,
                         normal,
                         depth,
                         contacts: contact_manifold.points,
@@ -121,6 +162,16 @@ impl PhysicsSystem {
                             a.angular_velocity,
                         )
                     });
+                    let a = m.body_a;
+                    let body_a_snapshot = (
+                        self.pos_snap[a],
+                        self.inv_mass_snap[a],
+                        self.inv_inertia_snap[a],
+                        a.restitution,
+                        a.friction,
+                        a.velocity,
+                        a.angular_velocity,
+                    );
 
                     let calculation_data = match body_a_snapshot {
                         None => continue,
@@ -226,14 +277,14 @@ impl PhysicsSystem {
 
     /// Copy RigidBody positions back to Transform components.
     fn sync_transforms(&self, world: &Arc<DynamicWorld>) {
-        world.for_each2_mut_both::<RigidBody, Transform>(|_e, body, transform| {
+        world.for_each2_mut_both::<PhysicsTransform, Transform>(|_e, body, transform| {
             transform.position = body.position;
             transform.rotation = body.rotation;
         });
     }
 
     fn step(&mut self, world: &Arc<DynamicWorld>) {
-        self.integrate(world, FIXED_DT);
+        self.integrate(world);
 
         self.collect_snapshots(world);
 
@@ -244,6 +295,16 @@ impl PhysicsSystem {
         self.positional_correction(world);
 
         self.sync_transforms(world);
+    }
+    #[inline]
+    fn clear_snapshots(&mut self) {
+        self.inv_inertia_snap.clear();
+        self.inv_mass_snap.clear();
+        self.entity_snap.clear();
+        self.aabb_snap.clear();
+        self.pos_snap.clear();
+        self.rot_snap.clear();
+        self.shape_snap.clear();
     }
 }
 

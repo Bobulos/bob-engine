@@ -37,10 +37,11 @@ pub struct PhysicsFlags {
 pub struct PhysicsShape {
     pub shape: Shape,
 }
-
 pub fn apply_impulse(
-    physics_mass: &PhysicsMass,
-    physics_velocity: &mut PhysicsVelocity,
+    velocity: f32,
+    angular_velocity: f32,
+    inv_mass: f32,
+    inv_inertia: f32,
     impulse: Float2,
     r: Float2,
 ) {
@@ -84,6 +85,53 @@ pub fn integrate(
     force.force = Float2::ZERO;
     force.torque = 0.0;
 }
+
+// pub fn apply_impulse(
+//     physics_mass: &PhysicsMass,
+//     physics_velocity: &mut PhysicsVelocity,
+//     impulse: Float2,
+//     r: Float2,
+// ) {
+//     physics_velocity.velocity += impulse * physics_mass.inv_mass;
+//     physics_velocity.angular_velocity += r.cross(impulse) * physics_mass.inv_inertia;
+// }
+
+// /// Velocity of a point fixed to this body at PhysicsWorld-space offset `r`.
+// pub fn velocity_at(physics_velocity: &PhysicsVelocity, r: Float2) -> Float2 {
+//     physics_velocity.velocity + Float2::cross_scalar_vec(physics_velocity.angular_velocity, r)
+// }
+
+// pub fn aabb(physics_shape: &PhysicsShape, physics_transform: &PhysicsTransform) -> Aabb {
+//     physics_shape
+//         .shape
+//         .aabb(physics_transform.position, physics_transform.rotation)
+// }
+
+// pub fn integrate(
+//     velocity: &mut PhysicsVelocity,
+//     force: &mut PhysicsForce,
+//     mass: &PhysicsMass,
+//     phys_transform: &mut PhysicsTransform,
+//     gravity: Float2,
+// ) {
+//     // Add if i need later
+
+//     // if self.is_static {
+//     //     return;
+//     // }
+//     // Semi-implicit Euler integration
+//     let accel = force.force * mass.inv_mass + gravity;
+//     velocity.velocity += accel * FIXED_DT;
+//     phys_transform.position += velocity.velocity * FIXED_DT;
+
+//     let alpha = force.torque * mass.inv_inertia;
+//     velocity.angular_velocity += alpha * FIXED_DT;
+//     phys_transform.rotation += velocity.angular_velocity * FIXED_DT;
+
+//     // Reset accumulators
+//     force.force = Float2::ZERO;
+//     force.torque = 0.0;
+// }
 
 #[derive(Debug, Clone)]
 pub struct RigidBody {
