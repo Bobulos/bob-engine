@@ -32,7 +32,8 @@ impl SystemBase for TestSystem {
         let targ = Float2::new(0.0, 0.0);
 
         if let Some(sprite_handle) = self.sprite_handle {
-            let sprite_cmpt = Sprite::new(sprite_handle, 32, 32, true, [0.5, 0.0], [0.25, 1.0]);
+            let sprite_cmpt =
+                Sprite::new(sprite_handle, 32, 32, true, [0.5, 0.0], [1.0 / 6.0, 1.0]);
             let other_cmpt = Sprite::new(
                 self.other_handle.unwrap(),
                 32,
