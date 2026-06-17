@@ -1,5 +1,6 @@
 pub mod aabb;
 pub mod collisions;
+pub mod connector;
 pub mod contact_manifold;
 pub mod manifold;
 pub mod physics_config;
