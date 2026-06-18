@@ -104,8 +104,8 @@ pub struct RigidBody {
     pub shape: Shape,
 
     // Accumulated forces (reset each frame)
-    force: Float2,
-    torque: f32,
+    pub force: Float2,
+    pub torque: f32,
 
     // Flags
     pub is_static: bool,

@@ -22,6 +22,7 @@ pub struct Engine {
 pub const MAIN_WORLD: &str = "main";
 pub const RENDER_GROUP: &str = "render_group";
 pub const PHYSICS_GROUP: &str = "physics_group";
+pub const PHYSICS_CONNECTION_GROUP: &str = "physics_connection_group";
 pub const SPRITE_BATCH_SIZE: usize = 1024 * 4; // 2^10
 pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 // pub const INCLUDE_ATLAS: &[&str] = &[
@@ -222,6 +223,20 @@ impl Engine {
         let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
         group.register_system(
             Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
+            0,
+        );
+
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            PHYSICS_CONNECTION_GROUP,
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        let group = self
+            .entities
+            .get_system_group_mut(PHYSICS_CONNECTION_GROUP)
+            .unwrap();
+        group.register_system(
+            Box::new(crate::runtime::phys::connector::connector_system::ConnectorSystem::new()),
             0,
         );
     }
