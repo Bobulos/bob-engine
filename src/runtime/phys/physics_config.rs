@@ -12,7 +12,7 @@ impl Default for PhysicsConfig {
         Self {
             gravity: Float2::new(0.0, 0.0),
             iterations: 5,
-            slop: 0.1,
+            slop: 0.01,
             correction_percent: 0.4,
         }
     }

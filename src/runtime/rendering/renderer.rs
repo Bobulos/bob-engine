@@ -1,4 +1,4 @@
-use crate::runtime::assets::{Asset, AssetHandle, AssetStore};
+use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::instance::Instance;
