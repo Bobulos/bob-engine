@@ -4,6 +4,7 @@ use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{self, Float2};
+use crate::runtime::phys::connector::PhysicsConnection;
 use crate::runtime::phys::connector::PhysicsConnector;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, OnceLock};
@@ -102,8 +103,12 @@ impl SystemBase for TestSystem {
                 crate::runtime::phys::connector::PhysicsConnector::new(
                     100000000.0,
                     100000000.0,
-                    [Some(e2), None, None, None],
-                    [Some(Float2::new(1.5, 0.0)), None, None, None],
+                    [
+                        Some(PhysicsConnection::new(e2, Float2::new(1.0, 0.0))),
+                        None,
+                        None,
+                        None,
+                    ],
                 ),
             );
 
@@ -135,8 +140,12 @@ impl SystemBase for TestSystem {
                 crate::runtime::phys::connector::PhysicsConnector::new(
                     100000000.0,
                     100000000.0,
-                    [Some(e3), None, None, None],
-                    [Some(Float2::new(1.5, 0.0)), None, None, None],
+                    [
+                        Some(PhysicsConnection::new(e3, Float2::new(1.0, 0.0))),
+                        None,
+                        None,
+                        None,
+                    ],
                 ),
             );
 
@@ -168,7 +177,6 @@ impl SystemBase for TestSystem {
                 crate::runtime::phys::connector::PhysicsConnector::new(
                     100000000.0,
                     100000000.0,
-                    [None, None, None, None],
                     [None, None, None, None],
                 ),
             );
