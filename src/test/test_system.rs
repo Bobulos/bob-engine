@@ -4,10 +4,11 @@ use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{self, Float2};
-use crate::runtime::phys::connector::PhysicsConnection;
-use crate::runtime::phys::connector::PhysicsConnector;
+use crate::runtime::phys::connector::PhysCxn;
+use crate::runtime::phys::connector::PhysJoint;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, OnceLock};
+use std::vec;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
 
@@ -45,6 +46,7 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
+            const TEST_VEL: f32 = 50.0;
             for _ in 0..1000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
@@ -67,178 +69,60 @@ impl SystemBase for TestSystem {
                     rot,
                 );
 
-                rb.velocity = (targ - pos).normalize() * 10.0;
+                rb.velocity = (targ - pos).normalize() * TEST_VEL;
                 world.add_component(e, rb);
             }
 
-            let e1 = world.create_entity();
-            let e2 = world.create_entity();
-            let e3 = world.create_entity();
+            const LENGTH: usize = 20;
+            let mut bodies: Vec<Entity> = Vec::new();
+            for i in 0..LENGTH {
+                bodies.push(world.create_entity());
+            }
+            for x in 0..LENGTH {
+                let entity = bodies[x];
+                bodies.push(entity);
 
-            let pos = Float2::new(0.0, 0.0);
-            world.add_component(
-                e1,
-                Transform {
-                    position: pos,
-                    rotation: 0.0,
-                },
-            );
+                let mut cxn_a: Option<PhysCxn> = None;
+                let mut cxn_b: Option<PhysCxn> = None;
+                if x != 0 {
+                    cxn_a = Some(PhysCxn::new(bodies[x - 1], Float2::new(-1.0, 0.0)));
+                }
+                if x != LENGTH {
+                    cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
+                }
 
-            world.add_component(e1, sprite_cmpt.clone());
-
-            world.add_component(
-                e1,
-                crate::runtime::phys::RigidBody::new(
-                    crate::runtime::phys::Shape::Rect {
-                        half_w: 0.5,
-                        half_h: 0.5,
+                let pos = Float2::new(x as f32, 0.0);
+                world.add_component(
+                    entity,
+                    Transform {
+                        position: pos,
+                        rotation: 0.0,
                     },
-                    100.0,
-                    pos,
-                    0.0,
-                ),
-            );
-            world.add_component(
-                e1,
-                crate::runtime::phys::connector::PhysicsConnector::new(
-                    100000000.0,
-                    100000000.0,
-                    [
-                        Some(PhysicsConnection::new(e2, Float2::new(1.0, 0.0))),
-                        None,
-                        None,
-                        None,
-                    ],
-                ),
-            );
+                );
 
-            let pos = Float2::new(1.0, 0.0);
-            world.add_component(
-                e2,
-                Transform {
-                    position: pos,
-                    rotation: 0.0,
-                },
-            );
+                world.add_component(entity, sprite_cmpt.clone());
 
-            world.add_component(e2, sprite_cmpt.clone());
-
-            world.add_component(
-                e2,
-                crate::runtime::phys::RigidBody::new(
-                    crate::runtime::phys::Shape::Rect {
-                        half_w: 0.5,
-                        half_h: 0.5,
-                    },
-                    100.0,
-                    pos,
-                    0.0,
-                ),
-            );
-            world.add_component(
-                e2,
-                crate::runtime::phys::connector::PhysicsConnector::new(
-                    100000000.0,
-                    100000000.0,
-                    [
-                        Some(PhysicsConnection::new(e3, Float2::new(1.0, 0.0))),
-                        None,
-                        None,
-                        None,
-                    ],
-                ),
-            );
-
-            let pos = Float2::new(2.0, 0.0);
-            world.add_component(
-                e3,
-                Transform {
-                    position: pos,
-                    rotation: 0.0,
-                },
-            );
-
-            world.add_component(e3, sprite_cmpt.clone());
-
-            world.add_component(
-                e3,
-                crate::runtime::phys::RigidBody::new(
-                    crate::runtime::phys::Shape::Rect {
-                        half_w: 0.5,
-                        half_h: 0.5,
-                    },
-                    100.0,
-                    pos,
-                    0.0,
-                ),
-            );
-            world.add_component(
-                e3,
-                crate::runtime::phys::connector::PhysicsConnector::new(
-                    100000000.0,
-                    100000000.0,
-                    [None, None, None, None],
-                ),
-            );
-
-            // // Random debris
-            // for y in 10..40 {
-            //     for x in 10..200 {
-            //         let x = (x * 4) as f32;
-            //         let y = (y * 4) as f32;
-            //         let e = world.create_entity();
-            //         let pos = Float2::new(x, y);
-            //         world.add_component(
-            //             e,
-            //             Transform {
-            //                 position: pos,
-            //                 rotation: 0.0,
-            //             },
-            //         );
-            //         world.add_component(e, sprite_cmpt.clone());
-
-            //         let mut rb = crate::runtime::phys::RigidBody::new(
-            //             crate::runtime::phys::Shape::Rect {
-            //                 half_w: 0.5,
-            //                 half_h: 0.5,
-            //             },
-            //             1.0,
-            //             pos,
-            //             0.0,
-            //         );
-            //         rb.inv_mass = 1.0;
-
-            //         rb.velocity = (Float2::new(0.0, 60.0) - pos).normalize();
-            //         world.add_component(e, rb);
-            //     }
-            // }
-            // for y in -10..10 {
-            //     for x in -10..10 {
-            //         let x = (x * 4) as f32;
-            //         let y = ((y + 1) * 4) as f32;
-            //         let e = world.create_entity();
-            //         let pos = Float2::new(x, y);
-            //         world.add_component(
-            //             e,
-            //             Transform {
-            //                 position: pos,
-            //                 rotation: 0.0,
-            //             },
-            //         );
-            //         world.add_component(e, sprite_cmpt.clone());
-
-            //         let mut rb = crate::runtime::phys::RigidBody::new(
-            //             crate::runtime::phys::Shape::Circle { radius: 0.5 },
-            //             1.0,
-            //             pos,
-            //             0.0,
-            //         );
-            //         rb.inv_mass = 1.0;
-
-            //         rb.velocity = (Float2::new(0.0, 60.0) - pos).normalize();
-            //         world.add_component(e, rb);
-            //     }
-            // }
+                world.add_component(
+                    entity,
+                    crate::runtime::phys::RigidBody::new(
+                        crate::runtime::phys::Shape::Rect {
+                            half_w: 0.5,
+                            half_h: 0.5,
+                        },
+                        100.0,
+                        pos,
+                        0.0,
+                    ),
+                );
+                world.add_component(
+                    entity,
+                    crate::runtime::phys::connector::PhysJoint::new(
+                        10.0,
+                        10.0,
+                        [cxn_a, cxn_b, None, None],
+                    ),
+                );
+            }
         }
     }
     fn on_update(&mut self, _world: &Arc<DynamicWorld>) {}

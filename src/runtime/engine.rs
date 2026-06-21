@@ -217,17 +217,6 @@ impl Engine {
     fn setup_physics(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
         self.entities.add_system_group(
-            PHYSICS_GROUP,
-            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
-        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
-        group.register_system(
-            Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
-            0,
-        );
-
-        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
             PHYSICS_CONNECTION_GROUP,
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
         );
@@ -237,6 +226,17 @@ impl Engine {
             .unwrap();
         group.register_system(
             Box::new(crate::runtime::phys::connector::connector_system::ConnectorSystem::new()),
+            0,
+        );
+
+        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+        self.entities.add_system_group(
+            PHYSICS_GROUP,
+            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+        );
+        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
+        group.register_system(
+            Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
             0,
         );
     }

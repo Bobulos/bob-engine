@@ -1,6 +1,6 @@
 pub mod connector_system;
-pub mod physics_connector;
+pub mod phys_joint;
 
-pub use physics_connector::PhysicsConnector;
+pub use phys_joint::PhysJoint;
 
-pub use physics_connector::PhysicsConnection;
+pub use phys_joint::PhysCxn;
