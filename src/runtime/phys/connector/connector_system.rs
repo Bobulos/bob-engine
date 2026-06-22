@@ -1,14 +1,13 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 use crate::runtime::math::Float2;
 use crate::runtime::phys::RigidBody;
 use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::phys::connector::phys_joint::PhysJoint;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 const FIXED_DT: f32 = 1.0 / 60.0;
-const SOLVER_ITERATIONS: usize = 1;
+const SOLVER_ITERATIONS: usize = 4;
 
 pub struct ConnectorSystem {
     /// Cxn and dynamic constraints cached for iterative resolution
@@ -70,15 +69,12 @@ impl SystemBase for ConnectorSystem {
         }
 
         // --- PASS 2: Collect Body Physics References for Fast Iteration ---
-        // Grab unique list of all entities involved in the joints to pull their bodies out safely
         let mut unique_entities = HashSet::new();
         for (e_a, u_cxn) in &self.joint_cache {
             unique_entities.insert(*e_a);
             unique_entities.insert(u_cxn.cxn);
         }
 
-        // Pull positions/velocities cleanly without holding borrow logs across iterations
-        // We'll update the world components *after* the iterations finish.
         let mut bodies: HashMap<Entity, RigidBody> = HashMap::new();
         for entity in unique_entities {
             world.get_component::<RigidBody, _>(entity, |rb| {
@@ -87,33 +83,31 @@ impl SystemBase for ConnectorSystem {
         }
 
         // --- PASS 3: Iterative Constraint Solver ---
+        // Get a raw pointer to the map to cleanly bypass the double-mutable borrow restriction
+        let bodies_ptr = &mut bodies as *mut HashMap<Entity, RigidBody>;
+
         for _ in 0..SOLVER_ITERATIONS {
             for &(entity_a, cxn) in &self.joint_cache {
                 let entity_b = cxn.cxn;
 
-                // Split borrow safely out of our local map
-                // let (rb_a, rb_b) = match (bodies.get_mut(&entity_a), bodies.get_mut(&entity_b)) {
-                //     (Some(a), Some(b)) => (a, b),
-                //     _ => continue,
-                // };
                 if entity_a == entity_b {
                     continue;
                 }
 
-                // 2. Get raw mutable pointers to bypass the double-borrow restriction
-                let rb_a_ptr = bodies.get_mut(&entity_a).map(|rb| rb as *mut RigidBody);
-                let rb_b_ptr = bodies.get_mut(&entity_b).map(|rb| rb as *mut RigidBody);
-
-                // 3. Safely dereference them inside an unsafe block
-                let (rb_a, rb_b) = match (rb_a_ptr, rb_b_ptr) {
-                    (Some(a_ptr), Some(b_ptr)) => unsafe { (&mut *a_ptr, &mut *b_ptr) },
-                    _ => continue,
+                // Safely extract separate mutable references from the raw map pointer
+                let (rb_a, rb_b) = unsafe {
+                    match (
+                        (*bodies_ptr).get_mut(&entity_a),
+                        (*bodies_ptr).get_mut(&entity_b),
+                    ) {
+                        (Some(a), Some(b)) => (a, b),
+                        _ => continue,
+                    }
                 };
-                // Assume rigid bodies expose standard mass/inertia properties.
-                // If your RigidBody is static/kinematic, inv_mass = 0.0
-                let inv_m_a = rb_a.inv_mass; // Replace with rb_a.inv_mass if available
+
+                let inv_m_a = rb_a.inv_mass;
                 let inv_m_b = rb_b.inv_mass;
-                let inv_i_a = rb_a.inv_inertia; // Replace with rb_a.inv_inertia if available
+                let inv_i_a = rb_a.inv_inertia;
                 let inv_i_b = rb_b.inv_inertia;
 
                 // 1. Angular Velocity Constraint Resolution (Weld matching speeds)
@@ -126,8 +120,7 @@ impl SystemBase for ConnectorSystem {
                 }
 
                 // 2. Linear Velocity Constraint Resolution at Anchors
-                // Convert your local anchors into world space offsets relative to mass center
-                let r_a = cxn.anc.rotate(rb_a.rotation); // Assuming Float2 has a .rotate() method
+                let r_a = cxn.anc.rotate(rb_a.rotation);
                 let r_b = cxn.anc.rotate(rb_b.rotation);
 
                 // Compute relative velocity at the exact anchor point contact surface
@@ -144,7 +137,6 @@ impl SystemBase for ConnectorSystem {
                 let relative_linear_vel = v_anchor_b - v_anchor_a;
 
                 // Calculate the effective linear mass matrix components for this joint
-                // K = (M_a^-1 + M_b^-1) * I - r_a_skew^2 * I_a^-1 - r_b_skew^2 * I_b^-1
                 let k_matrix_x =
                     inv_m_a + inv_m_b + r_a.y * r_a.y * inv_i_a + r_b.y * r_b.y * inv_i_b;
                 let k_matrix_y =
@@ -179,6 +171,178 @@ impl SystemBase for ConnectorSystem {
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
 }
 
+// use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
+// use crate::runtime::math::Float2;
+// use crate::runtime::phys::RigidBody;
+// use crate::runtime::phys::connector::PhysCxn;
+// use crate::runtime::phys::connector::phys_joint::PhysJoint;
+// use std::collections::{HashMap, HashSet};
+// use std::sync::Arc;
+
+// const FIXED_DT: f32 = 1.0 / 60.0;
+// const SOLVER_ITERATIONS: usize = 4;
+
+// pub struct ConnectorSystem {
+//     /// Cxn and dynamic constraints cached for iterative resolution
+//     pub joint_cache: Vec<(Entity, PhysCxn)>,
+// }
+
+// impl ConnectorSystem {
+//     pub fn new() -> Self {
+//         Self {
+//             joint_cache: Vec::new(),
+//         }
+//     }
+// }
+
+// pub fn check_if_broken(ctr: &mut PhysJoint, rb: &RigidBody) {
+//     if rb.force.length_sq() >= ctr.cxn_strength_ln_sq || rb.torque.abs() >= ctr.cxn_strength_ang {
+//         ctr.is_intact = false;
+//     }
+// }
+
+// impl SystemBase for ConnectorSystem {
+//     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
+
+//     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
+//         self.joint_cache.clear();
+
+//         // --- PASS 1: Check Breaks & Collect Live Joints ---
+//         let mut broken_entities = HashSet::new();
+
+//         world.for_each2_mut_both::<RigidBody, PhysJoint>(|entity, rb, joint| {
+//             check_if_broken(joint, rb);
+//             if !joint.is_intact {
+//                 broken_entities.insert(entity);
+//                 return;
+//             }
+
+//             for cxn in joint.cxns.iter() {
+//                 if let Some(u_cxn) = cxn {
+//                     self.joint_cache.push((entity, *u_cxn));
+//                 }
+//             }
+//         });
+
+//         // Break references if their connected counterparts snapped
+//         if !broken_entities.is_empty() {
+//             world.for_each_mut::<PhysJoint>(|_, joint| {
+//                 for cxn in joint.cxns.iter_mut() {
+//                     if let Some(u_cxn) = cxn {
+//                         if broken_entities.contains(&u_cxn.cxn) {
+//                             *cxn = None;
+//                         }
+//                     }
+//                 }
+//             });
+//             // Prune cached entries pointing to dead connections
+//             self.joint_cache.retain(|(entity, u_cxn)| {
+//                 !broken_entities.contains(entity) && !broken_entities.contains(&u_cxn.cxn)
+//             });
+//         }
+
+//         // --- PASS 2: Collect Body Physics References for Fast Iteration ---
+//         let mut unique_entities = HashSet::new();
+//         for (e_a, u_cxn) in &self.joint_cache {
+//             unique_entities.insert(*e_a);
+//             unique_entities.insert(u_cxn.cxn);
+//         }
+
+//         let mut bodies: HashMap<Entity, RigidBody> = HashMap::new();
+//         for entity in unique_entities {
+//             world.get_component::<RigidBody, _>(entity, |rb| {
+//                 bodies.insert(entity, rb.clone());
+//             });
+//         }
+
+//         // --- PASS 3: Iterative Constraint Solver ---
+//         // Get a raw pointer to the map to cleanly bypass the double-mutable borrow restriction
+//         let bodies_ptr = &mut bodies as *mut HashMap<Entity, RigidBody>;
+
+//         for _ in 0..SOLVER_ITERATIONS {
+//             for &(entity_a, cxn) in &self.joint_cache {
+//                 let entity_b = cxn.cxn;
+
+//                 if entity_a == entity_b {
+//                     continue;
+//                 }
+
+//                 // Safely extract separate mutable references from the raw map pointer
+//                 let (rb_a, rb_b) = unsafe {
+//                     match (
+//                         (*bodies_ptr).get_mut(&entity_a),
+//                         (*bodies_ptr).get_mut(&entity_b),
+//                     ) {
+//                         (Some(a), Some(b)) => (a, b),
+//                         _ => continue,
+//                     }
+//                 };
+
+//                 let inv_m_a = rb_a.inv_mass;
+//                 let inv_m_b = rb_b.inv_mass;
+//                 let inv_i_a = rb_a.inv_inertia;
+//                 let inv_i_b = rb_b.inv_inertia;
+
+//                 // 1. Angular Velocity Constraint Resolution (Weld matching speeds)
+//                 let relative_angular_vel = rb_b.angular_velocity - rb_a.angular_velocity;
+//                 let angular_mass = inv_i_a + inv_i_b;
+//                 if angular_mass > 0.0 {
+//                     let angular_impulse = relative_angular_vel / angular_mass;
+//                     rb_a.angular_velocity += angular_impulse * inv_i_a;
+//                     rb_b.angular_velocity -= angular_impulse * inv_i_b;
+//                 }
+
+//                 // 2. Linear Velocity Constraint Resolution at Anchors
+//                 let r_a = cxn.anc.rotate(rb_a.rotation);
+//                 let r_b = cxn.anc.rotate(rb_b.rotation);
+
+//                 // Compute relative velocity at the exact anchor point contact surface
+//                 let v_anchor_a = rb_a.velocity
+//                     + Float2::new(
+//                         -r_a.y * rb_a.angular_velocity,
+//                         r_a.x * rb_a.angular_velocity,
+//                     );
+//                 let v_anchor_b = rb_b.velocity
+//                     + Float2::new(
+//                         -r_b.y * rb_b.angular_velocity,
+//                         r_b.x * rb_b.angular_velocity,
+//                     );
+//                 let relative_linear_vel = v_anchor_b - v_anchor_a;
+
+//                 // Calculate the effective linear mass matrix components for this joint
+//                 let k_matrix_x =
+//                     inv_m_a + inv_m_b + r_a.y * r_a.y * inv_i_a + r_b.y * r_b.y * inv_i_b;
+//                 let k_matrix_y =
+//                     inv_m_a + inv_m_b + r_a.x * r_a.x * inv_i_a + r_b.x * r_b.x * inv_i_b;
+
+//                 if k_matrix_x > 0.0 && k_matrix_y > 0.0 {
+//                     let linear_impulse = Float2::new(
+//                         relative_linear_vel.x / k_matrix_x,
+//                         relative_linear_vel.y / k_matrix_y,
+//                     );
+
+//                     // Apply linear velocity changes
+//                     rb_a.velocity += linear_impulse * inv_m_a;
+//                     rb_b.velocity -= linear_impulse * inv_m_b;
+
+//                     // Apply resulting anchor torque adjustments
+//                     rb_a.angular_velocity += r_a.cross(linear_impulse) * inv_i_a;
+//                     rb_b.angular_velocity -= r_b.cross(linear_impulse) * inv_i_b;
+//                 }
+//             }
+//         }
+
+//         // --- PASS 4: Flush Solved Velocities Back to World Components ---
+//         for (entity, solved_rb) in bodies {
+//             world.get_component_mut::<RigidBody, _>(entity, |rb| {
+//                 rb.velocity = solved_rb.velocity;
+//                 rb.angular_velocity = solved_rb.angular_velocity;
+//             });
+//         }
+//     }
+
+//     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
+// }
 // use std::collections::{HashMap, HashSet};
 // use std::sync::Arc;
 
