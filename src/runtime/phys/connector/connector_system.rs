@@ -1,3 +1,4 @@
+use crate::runtime::ecs::core_components::{Transform, transform};
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 use crate::runtime::math::Float2;
 use crate::runtime::phys::RigidBody;
@@ -10,8 +11,8 @@ const FIXED_DT: f32 = 1.0 / 60.0;
 const SOLVER_ITERATIONS: usize = 4;
 
 pub struct ConnectorSystem {
-    /// Cxn and dynamic constraints cached for iterative resolution
-    pub joint_cache: Vec<(Entity, PhysCxn)>,
+    /// For lookups in the solve phase entity and then world pos to move to
+    pub joint_cache: Vec<(Entity, Entity, Float2)>,
 }
 
 impl ConnectorSystem {
@@ -34,142 +35,237 @@ impl SystemBase for ConnectorSystem {
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         self.joint_cache.clear();
 
-        // --- PASS 1: Check Breaks & Collect Live Joints ---
-        let mut broken_entities = HashSet::new();
+        world.for_each3_mut::<Transform, RigidBody, PhysJoint>(|entity, transform, rb, joint| {
+            for w_cxn in joint.cxns.iter() {
+                if let Some(cxn) = w_cxn {
+                    // Calculate anchor position in world space for the host entity
+                    let host_anc_w_pos = transform.position + (cxn.anc.rotate(transform.rotation));
 
-        world.for_each2_mut_both::<RigidBody, PhysJoint>(|entity, rb, joint| {
-            check_if_broken(joint, rb);
-            if !joint.is_intact {
-                broken_entities.insert(entity);
-                return;
-            }
-
-            for cxn in joint.cxns.iter() {
-                if let Some(u_cxn) = cxn {
-                    self.joint_cache.push((entity, *u_cxn));
+                    // Cache: (Host Entity, Target Entity, Host Anchor World Pos)
+                    self.joint_cache.push((entity, cxn.cxn, host_anc_w_pos));
                 }
             }
         });
 
-        // Break references if their connected counterparts snapped
-        if !broken_entities.is_empty() {
-            world.for_each_mut::<PhysJoint>(|_, joint| {
-                for cxn in joint.cxns.iter_mut() {
-                    if let Some(u_cxn) = cxn {
-                        if broken_entities.contains(&u_cxn.cxn) {
-                            *cxn = None;
-                        }
-                    }
-                }
+        // Tuning constants
+        const SPRING_STIFFNESS: f32 = 100.0;
+        const SPRING_DAMPING: f32 = 1.0; // Keeps things from vibrating endlessly
+        const TORSIONAL_MULT: f32 = 0.01;
+        const ANGULAR_DAMP: f32 = 0.1;
+
+        for &(host_entity, target_entity, host_anc_pos) in self.joint_cache.iter() {
+            let mut target_pos = Float2::ZERO;
+            let mut target_vel = Float2::ZERO;
+            let mut host_vel = Float2::ZERO;
+
+            let mut target_rot = 0.0;
+            let mut host_rot = 0.0;
+            let mut host_ang_vel = 0.0;
+            let mut target_ang_vel = 0.0;
+            // Gather target data
+            world.get_component::<Transform, _>(target_entity, |t| {
+                target_pos = t.position;
+                target_rot = t.rotation;
             });
-            // Prune cached entries pointing to dead connections
-            self.joint_cache.retain(|(entity, u_cxn)| {
-                !broken_entities.contains(entity) && !broken_entities.contains(&u_cxn.cxn)
+            world.get_component::<RigidBody, _>(target_entity, |rb| {
+                target_vel = rb.velocity;
+                target_ang_vel = rb.angular_velocity;
             });
-        }
 
-        // --- PASS 2: Collect Body Physics References for Fast Iteration ---
-        let mut unique_entities = HashSet::new();
-        for (e_a, u_cxn) in &self.joint_cache {
-            unique_entities.insert(*e_a);
-            unique_entities.insert(u_cxn.cxn);
-        }
-
-        let mut bodies: HashMap<Entity, RigidBody> = HashMap::new();
-        for entity in unique_entities {
-            world.get_component::<RigidBody, _>(entity, |rb| {
-                bodies.insert(entity, rb.clone());
+            let mut targ_ancs: [Option<PhysCxn>; 4] = [None; 4];
+            world.get_component::<PhysJoint, _>(target_entity, |jnt| {
+                targ_ancs = jnt.cxns;
             });
-        }
 
-        // --- PASS 3: Iterative Constraint Solver ---
-        // Get a raw pointer to the map to cleanly bypass the double-mutable borrow restriction
-        let bodies_ptr = &mut bodies as *mut HashMap<Entity, RigidBody>;
+            world.get_component::<Transform, _>(host_entity, |t| {
+                host_rot = t.rotation;
+            });
 
-        for _ in 0..SOLVER_ITERATIONS {
-            for &(entity_a, cxn) in &self.joint_cache {
-                let entity_b = cxn.cxn;
+            world.get_component::<RigidBody, _>(host_entity, |rb| {
+                host_vel = rb.velocity;
+                host_ang_vel = rb.angular_velocity;
+            });
 
-                if entity_a == entity_b {
-                    continue;
-                }
+            let delta = host_anc_pos - target_pos;
+            let current_length = delta.length();
 
-                // Safely extract separate mutable references from the raw map pointer
-                let (rb_a, rb_b) = unsafe {
-                    match (
-                        (*bodies_ptr).get_mut(&entity_a),
-                        (*bodies_ptr).get_mut(&entity_b),
-                    ) {
-                        (Some(a), Some(b)) => (a, b),
-                        _ => continue,
-                    }
-                };
-
-                let inv_m_a = rb_a.inv_mass;
-                let inv_m_b = rb_b.inv_mass;
-                let inv_i_a = rb_a.inv_inertia;
-                let inv_i_b = rb_b.inv_inertia;
-
-                // 1. Angular Velocity Constraint Resolution (Weld matching speeds)
-                let relative_angular_vel = rb_b.angular_velocity - rb_a.angular_velocity;
-                let angular_mass = inv_i_a + inv_i_b;
-                if angular_mass > 0.0 {
-                    let angular_impulse = relative_angular_vel / angular_mass;
-                    rb_a.angular_velocity += angular_impulse * inv_i_a;
-                    rb_b.angular_velocity -= angular_impulse * inv_i_b;
-                }
-
-                // 2. Linear Velocity Constraint Resolution at Anchors
-                let r_a = cxn.anc.rotate(rb_a.rotation);
-                let r_b = cxn.anc.rotate(rb_b.rotation);
-
-                // Compute relative velocity at the exact anchor point contact surface
-                let v_anchor_a = rb_a.velocity
-                    + Float2::new(
-                        -r_a.y * rb_a.angular_velocity,
-                        r_a.x * rb_a.angular_velocity,
-                    );
-                let v_anchor_b = rb_b.velocity
-                    + Float2::new(
-                        -r_b.y * rb_b.angular_velocity,
-                        r_b.x * rb_b.angular_velocity,
-                    );
-                let relative_linear_vel = v_anchor_b - v_anchor_a;
-
-                // Calculate the effective linear mass matrix components for this joint
-                let k_matrix_x =
-                    inv_m_a + inv_m_b + r_a.y * r_a.y * inv_i_a + r_b.y * r_b.y * inv_i_b;
-                let k_matrix_y =
-                    inv_m_a + inv_m_b + r_a.x * r_a.x * inv_i_a + r_b.x * r_b.x * inv_i_b;
-
-                if k_matrix_x > 0.0 && k_matrix_y > 0.0 {
-                    let linear_impulse = Float2::new(
-                        relative_linear_vel.x / k_matrix_x,
-                        relative_linear_vel.y / k_matrix_y,
-                    );
-
-                    // Apply linear velocity changes
-                    rb_a.velocity += linear_impulse * inv_m_a;
-                    rb_b.velocity -= linear_impulse * inv_m_b;
-
-                    // Apply resulting anchor torque adjustments
-                    rb_a.angular_velocity += r_a.cross(linear_impulse) * inv_i_a;
-                    rb_b.angular_velocity -= r_b.cross(linear_impulse) * inv_i_b;
-                }
+            if current_length < 0.001 {
+                continue;
             }
-        }
 
-        // --- PASS 4: Flush Solved Velocities Back to World Components ---
-        for (entity, solved_rb) in bodies {
-            world.get_component_mut::<RigidBody, _>(entity, |rb| {
-                rb.velocity = solved_rb.velocity;
-                rb.angular_velocity = solved_rb.angular_velocity;
+            let force_dir = delta / current_length;
+
+            let spring_force_mag = SPRING_STIFFNESS * (current_length);
+
+            let relative_velocity = host_vel - target_vel;
+            let damping_force_mag = relative_velocity.dot(force_dir) * SPRING_DAMPING;
+
+            // Total force scalar
+            let total_force = spring_force_mag - damping_force_mag;
+
+            // Fix later if needed
+            let force_imp = force_dir * total_force;
+
+            // let simp_torque = -(target_rot - host_rot) * TORSIONAL_MULT;
+            // let damper = ANGULAR_DAMP * (host_ang_vel - target_ang_vel).abs();
+            // let damp_torque = simp_torque / damper;
+            //
+            world.get_component_mut::<RigidBody, _>(target_entity, |rb| {
+                rb.apply_force_at(force_imp, host_anc_pos);
+                //rb.apply_impulse(force_imp, Float2::ZERO);
+            });
+
+            world.get_component_mut::<RigidBody, _>(host_entity, |rb| {
+                rb.apply_force_at(-force_imp, host_anc_pos);
+                //rb.apply_impulse(-force_imp, Float2::ZERO);
             });
         }
     }
 
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
 }
+
+// use crate::runtime::ecs::core_components::{Transform, transform};
+// use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
+// use crate::runtime::math::Float2;
+// use crate::runtime::phys::RigidBody;
+// use crate::runtime::phys::connector::PhysCxn;
+// use crate::runtime::phys::connector::phys_joint::PhysJoint;
+// use std::collections::{HashMap, HashSet};
+// use std::sync::Arc;
+
+// const FIXED_DT: f32 = 1.0 / 60.0;
+// const SOLVER_ITERATIONS: usize = 4;
+
+// pub struct ConnectorSystem {
+//     /// For lookups in the solve phase entity and then world pos to move to
+//     pub joint_cache: Vec<(Entity, Entity, Float2)>,
+// }
+
+// impl ConnectorSystem {
+//     pub fn new() -> Self {
+//         Self {
+//             joint_cache: Vec::new(),
+//         }
+//     }
+// }
+
+// pub fn check_if_broken(ctr: &mut PhysJoint, rb: &RigidBody) {
+//     if rb.force.length_sq() >= ctr.cxn_strength_ln_sq || rb.torque.abs() >= ctr.cxn_strength_ang {
+//         ctr.is_intact = false;
+//     }
+// }
+
+// impl SystemBase for ConnectorSystem {
+//     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
+
+//     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
+//         self.joint_cache.clear();
+
+//         world.for_each3_mut::<Transform, RigidBody, PhysJoint>(|entity, transform, rb, joint| {
+//             for w_cxn in joint.cxns.iter() {
+//                 if let Some(cxn) = w_cxn {
+//                     // Calculate anchor position in world space for the host entity
+//                     let host_anc_w_pos = transform.position + (cxn.anc.rotate(transform.rotation));
+
+//                     // Cache: (Host Entity, Target Entity, Host Anchor World Pos)
+//                     self.joint_cache.push((entity, cxn.cxn, host_anc_w_pos));
+//                 }
+//             }
+//         });
+
+//         // Tuning constants
+//         const SPRING_STIFFNESS: f32 = 100.0;
+//         const SPRING_DAMPING: f32 = 5.0; // Keeps things from vibrating endlessly
+//         const TORQUE_STIFFNESS: f32 = 0.1; // Higher = stiffer, resists bending more
+//         const TORQUE_DAMPING: f32 = 0.0; // Keeps it from wobbling wildly
+//         const REST_ANGLE_DIFF: f32 = 0.0;
+
+//         for &(host_entity, target_entity, host_anc_pos) in self.joint_cache.iter() {
+//             let mut target_pos = Float2::ZERO;
+//             let mut target_vel = Float2::ZERO;
+//             let mut host_vel = Float2::ZERO;
+
+//             let mut host_rot = 0.0;
+//             let mut target_rot = 0.0;
+//             let mut host_ang_vel = 0.0;
+//             let mut target_ang_vel = 0.0;
+
+//             // Gather target data
+//             world.get_component::<Transform, _>(target_entity, |t| {
+//                 target_pos = t.position;
+//                 target_rot = t.rotation;
+//             });
+//             world.get_component::<RigidBody, _>(target_entity, |rb| {
+//                 target_vel = rb.velocity;
+//                 target_ang_vel = rb.angular_velocity;
+//             });
+
+//             world.get_component::<Transform, _>(host_entity, |t| host_rot = t.rotation);
+//             // Gather host velocity for damping
+//             world.get_component::<RigidBody, _>(host_entity, |rb| {
+//                 host_vel = rb.velocity;
+//                 host_ang_vel = rb.angular_velocity;
+//             });
+
+//             // Calculate delta vector (from target to host anchor)
+//             let delta = host_anc_pos - target_pos;
+//             let current_length = delta.length();
+
+//             // Guard against division by zero (NaN trap)
+//             if current_length < 0.001 {
+//                 continue;
+//             }
+
+//             let force_dir = delta / current_length;
+
+//             // --- Physics Calculations ---
+//             // Hooke's Law: F = -k * (x - x0)
+//             let spring_force_mag = SPRING_STIFFNESS * (current_length);
+
+//             // Damping: Damping force opposes relative velocity along the spring axis
+//             let relative_velocity = host_vel - target_vel;
+//             let damping_force_mag = relative_velocity.dot(force_dir) * SPRING_DAMPING;
+
+//             // Total force scalar
+//             let total_force = (spring_force_mag + damping_force_mag);
+
+//             // Fix later if needed
+//             let force_imp = force_dir * total_force * 0.5;
+
+//             // Ang pass
+//             let mut angle_diff = host_rot - target_rot;
+//             println!("angle diff {}", angle_diff);
+
+//             // Keep angle_diff normalized between -PI and PI so it takes the shortest rotation path
+//             angle_diff = (angle_diff + std::f32::consts::PI).rem_euclid(2.0 * std::f32::consts::PI)
+//                 - std::f32::consts::PI;
+
+//             // 3. Angular Hooke's Law
+//             let torque_spring = TORQUE_STIFFNESS * (angle_diff - REST_ANGLE_DIFF);
+
+//             // 4. Angular Damping
+//             let relative_ang_vel = host_ang_vel - target_ang_vel;
+//             let torque_damping = TORQUE_DAMPING * relative_ang_vel;
+
+//             // Total torque to apply
+//             let total_torque = torque_spring;
+
+//             world.get_component_mut::<RigidBody, _>(target_entity, |rb| {
+//                 rb.apply_force(force_imp);
+//                 rb.apply_torque(-total_torque);
+//             });
+
+//             // Pull host entity in the exact opposite direction
+//             world.get_component_mut::<RigidBody, _>(host_entity, |rb| {
+//                 rb.apply_force(-force_imp);
+//                 //rb.apply_torque(-total_torque);
+//             });
+//         }
+//     }
+
+//     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
+// }
 
 // use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 // use crate::runtime::math::Float2;

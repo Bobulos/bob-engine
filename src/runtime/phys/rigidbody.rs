@@ -145,6 +145,10 @@ impl RigidBody {
         self.force += f;
     }
 
+    pub fn apply_torque(&mut self, t: f32) {
+        self.torque += t;
+    }
+
     pub fn apply_force_at(&mut self, f: Float2, physics_world_point: Float2) {
         self.force += f;
         let r = physics_world_point - self.position;

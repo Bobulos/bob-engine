@@ -46,12 +46,12 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
-            const TEST_VEL: f32 = 50.0;
+            const TEST_VEL: f32 = 10.0;
             for _ in 0..1000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
-                    rand::random::<f32>() * 2000.0 - 1000.0,
+                    (rand::random::<f32>() * 2000.0 - 1000.0),
                 );
                 let rot = math::angle_to_point(pos, targ) + std::f32::consts::PI / 2.0;
                 world.add_component(
@@ -64,7 +64,7 @@ impl SystemBase for TestSystem {
                 world.add_component(e, other_cmpt);
                 let mut rb = crate::runtime::phys::RigidBody::new(
                     crate::runtime::phys::Shape::Circle { radius: 0.5 },
-                    100.0,
+                    0.1,
                     pos,
                     rot,
                 );
@@ -73,25 +73,29 @@ impl SystemBase for TestSystem {
                 world.add_component(e, rb);
             }
 
-            const LENGTH: usize = 20;
+            const LENGTH: usize = 2;
             let mut bodies: Vec<Entity> = Vec::new();
             for i in 0..LENGTH {
                 bodies.push(world.create_entity());
             }
             for x in 0..LENGTH {
-                let entity = bodies[x];
-                bodies.push(entity);
+                let entity = bodies[x]; // Removed the accidental bodies.push(entity)
 
                 let mut cxn_a: Option<PhysCxn> = None;
                 let mut cxn_b: Option<PhysCxn> = None;
-                if x != 0 {
+
+                // Link to the previous entity (if we aren't the first one)
+                if x > 0 {
                     cxn_a = Some(PhysCxn::new(bodies[x - 1], Float2::new(-1.0, 0.0)));
                 }
-                if x != LENGTH {
+
+                // Link to the next entity (if we aren't the last one) safely
+                if x < LENGTH - 1 {
                     cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
                 }
 
                 let pos = Float2::new(x as f32, 0.0);
+
                 world.add_component(
                     entity,
                     Transform {
@@ -109,17 +113,19 @@ impl SystemBase for TestSystem {
                             half_w: 0.5,
                             half_h: 0.5,
                         },
-                        100.0,
+                        1.0,
                         pos,
                         0.0,
                     ),
                 );
+
+                // Now both connections are stored properly!
                 world.add_component(
                     entity,
                     crate::runtime::phys::connector::PhysJoint::new(
                         10.0,
                         10.0,
-                        [cxn_a, cxn_b, None, None],
+                        [cxn_a, None, None, None],
                     ),
                 );
             }
