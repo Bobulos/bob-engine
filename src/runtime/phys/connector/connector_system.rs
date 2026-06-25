@@ -1,15 +1,14 @@
-use crate::runtime::ecs::core_components::{Transform, transform};
+use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
-use crate::runtime::math::{Float2, angle, float2};
+use crate::runtime::math::Float2;
 use crate::runtime::phys::RigidBody;
-use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::phys::connector::phys_joint::PhysJoint;
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 const FIXED_DT: f32 = 1.0 / 60.0;
-const SOLVER_ITERATIONS: usize = 32;
-const SPRING_CO: f32 = 0.999;
+const SOLVER_ITERATIONS: usize = 1;
+const SPRING_CO: f32 = 0.9999999;
+const MAX_BROKEN: usize = 1024;
 
 pub struct ConnectorSystem {
     /// Caches: ent a, vel, ent b, inv, ang, pos, rot
@@ -31,6 +30,9 @@ impl SystemBase for ConnectorSystem {
         self.joint_cache.clear();
 
         world.for_each3_mut::<Transform, RigidBody, PhysJoint>(|entity, _transform, rb, joint| {
+            if !joint.is_intact {
+                return;
+            }
             for cxn in joint.cxns {
                 if let Some(c) = cxn {
                     self.joint_cache.push((
@@ -45,12 +47,17 @@ impl SystemBase for ConnectorSystem {
                 }
             }
         });
-
+        let mut broken_cxns: [(Entity, Entity); MAX_BROKEN] = [(Entity(0), Entity(0)); MAX_BROKEN];
+        let mut broken_idx: usize = 0;
         for _ in 0..SOLVER_ITERATIONS {
             for jnt in self.joint_cache.iter() {
                 let target_ent = jnt.0;
-                let host_velocity = jnt.1;
+
                 let host_ent = jnt.2;
+                if target_ent == host_ent {
+                    continue; // skip self-referential joints
+                }
+                let host_velocity = jnt.1;
                 let host_inv_mass = 1.0;
                 let host_inv_inertia = jnt.3;
                 let host_ang_vel = jnt.4;
@@ -59,13 +66,11 @@ impl SystemBase for ConnectorSystem {
 
                 let anchor_world = host_pos;
 
-                // Modify target_success to catch both linear and angular impulses
                 let target_success =
                     world.get_component_mut::<RigidBody, _>(target_ent, |target_rb| {
                         let r_host = anchor_world - host_pos;
                         let r_target = anchor_world - target_rb.position;
 
-                        // --- Linear Constraint ---
                         let v_host_anchor = host_velocity
                             + Float2::new(-host_ang_vel * r_host.y, host_ang_vel * r_host.x);
                         let v_target_anchor = target_rb.velocity
@@ -103,8 +108,6 @@ impl SystemBase for ConnectorSystem {
                             (r_target.x * impulse.y) - (r_target.y * impulse.x);
                         target_rb.apply_angular_impulse(target_torque_impulse);
 
-                        // --- Angular Spring/Damper Constraint ---
-                        // Target relative angular velocity (0.0 means they will try to match perfectly)
                         let target_rel_ang_vel = 0.0;
                         let rel_ang_vel = host_ang_vel - target_rb.angular_velocity;
                         let ang_vel_error = rel_ang_vel - target_rel_ang_vel;
@@ -112,7 +115,6 @@ impl SystemBase for ConnectorSystem {
                         let inv_inertia_sum = host_inv_inertia + target_rb.inv_inertia;
 
                         let ang_impulse = if inv_inertia_sum > 0.0 {
-                            // 0.1 acts as a spring/damping coefficient to prevent hard snapping
                             (ang_vel_error / inv_inertia_sum) * SPRING_CO
                         } else {
                             0.0
@@ -120,11 +122,17 @@ impl SystemBase for ConnectorSystem {
 
                         target_rb.apply_angular_impulse(ang_impulse);
 
-                        // Return both impulses to apply the reaction to the host
+                        // break the joint
+                        let separation = Float2::distance(host_pos, target_rb.position);
+                        if separation > 1.1 && broken_idx < MAX_BROKEN {
+                            broken_cxns[broken_idx] = (host_ent, target_ent);
+                            broken_idx += 1;
+                        }
                         (impulse, ang_impulse)
                     });
 
                 if let Some((impulse, ang_impulse)) = target_success {
+                    //println!("{},{}", impulse.length(), ang_impulse);
                     world.get_component_mut::<RigidBody, _>(host_ent, |host_rb| {
                         let host_impulse = -impulse;
                         let r_host = anchor_world - host_rb.position;
@@ -134,11 +142,22 @@ impl SystemBase for ConnectorSystem {
                         let host_torque_impulse =
                             (r_host.x * host_impulse.y) - (r_host.y * host_impulse.x);
 
-                        // Apply the linear anchor torque AND the equal-and-opposite angular spring impulse
                         host_rb.apply_angular_impulse(host_torque_impulse - ang_impulse);
                     });
                 }
             }
+        }
+        for i in 0..broken_idx {
+            world.get_component_mut::<PhysJoint, _>(broken_cxns[i].1, |joint| {
+                for cxn in joint.cxns.iter_mut() {
+                    if let Some(c) = cxn {
+                        if c.cxn == broken_cxns[i].0 {
+                            *cxn = None;
+                        }
+                    }
+                }
+            });
+            world.remove_component::<PhysJoint>(broken_cxns[i].0);
         }
     }
 

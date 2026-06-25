@@ -234,7 +234,10 @@ impl Engine {
             PHYSICS_GROUP,
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
         );
-        let group = self.entities.get_system_group_mut(PHYSICS_GROUP).unwrap();
+        let group = self
+            .entities
+            .get_system_group_mut(PHYSICS_CONNECTION_GROUP)
+            .unwrap();
         group.register_system(
             Box::new(crate::runtime::phys::physics_system::PhysicsSystem::new()),
             0,

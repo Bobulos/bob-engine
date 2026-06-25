@@ -33,7 +33,7 @@ impl SystemBase for TestSystem {
             self.other_handle = asset_store.get_asset_idx_by_path("exp/projectiles_m.png");
         }
 
-        let targ = Float2::new(0.0, 0.0);
+        let targ = Float2::new(5.0, 0.0);
 
         if let Some(sprite_handle) = self.sprite_handle {
             let sprite_cmpt =
@@ -46,13 +46,15 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
-            const TEST_VEL: f32 = 10.0;
+            const TEST_MASS: f32 = 1.1;
+            const TEST_VEL: f32 = 50.0;
             for _ in 0..1000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
                     (rand::random::<f32>() * 2000.0 - 1000.0),
                 );
+                //let pos = Float2::new(5.0, -100.0);
                 let rot = math::angle_to_point(pos, targ) + std::f32::consts::PI / 2.0;
                 world.add_component(
                     e,
@@ -64,7 +66,7 @@ impl SystemBase for TestSystem {
                 world.add_component(e, other_cmpt);
                 let mut rb = crate::runtime::phys::RigidBody::new(
                     crate::runtime::phys::Shape::Circle { radius: 0.5 },
-                    0.1,
+                    TEST_MASS,
                     pos,
                     rot,
                 );
@@ -74,11 +76,12 @@ impl SystemBase for TestSystem {
             }
 
             const LENGTH: usize = 10;
-            let mut bodies: Vec<Entity> = Vec::new();
-            for _ in 0..LENGTH {
-                bodies.push(world.create_entity());
-            }
-            for y in 0..10 {
+
+            for y in 0..100 {
+                let mut bodies: Vec<Entity> = Vec::new();
+                for _ in 0..LENGTH {
+                    bodies.push(world.create_entity());
+                }
                 for x in 0..LENGTH {
                     let entity = bodies[x];
 
@@ -95,7 +98,7 @@ impl SystemBase for TestSystem {
                         cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
                     }
 
-                    let pos = Float2::new(x as f32, y as f32);
+                    let pos = Float2::new(x as f32, 5.0 * y as f32);
 
                     world.add_component(
                         entity,
