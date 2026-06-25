@@ -172,12 +172,12 @@ impl PhysicsSystem {
                     if let Some((j, friction_impulse, ra, rb)) = calculation_data {
                         let normal_impulse = m.normal * j;
                         world.get_component_mut::<RigidBody, _>(m.body_a, |a| {
-                            a.apply_impulse(-normal_impulse, ra);
-                            a.apply_impulse(-friction_impulse, ra);
+                            a.apply_impulse_pt(-normal_impulse, ra);
+                            a.apply_impulse_pt(-friction_impulse, ra);
                         });
                         world.get_component_mut::<RigidBody, _>(m.body_b, |b| {
-                            b.apply_impulse(normal_impulse, rb);
-                            b.apply_impulse(friction_impulse, rb);
+                            b.apply_impulse_pt(normal_impulse, rb);
+                            b.apply_impulse_pt(friction_impulse, rb);
                         });
                     }
                 }

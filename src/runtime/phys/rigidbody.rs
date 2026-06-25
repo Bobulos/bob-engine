@@ -155,11 +155,29 @@ impl RigidBody {
         self.torque += r.cross(f);
     }
 
-    pub fn apply_impulse(&mut self, impulse: Float2, r: Float2) {
+    pub fn apply_impulse_pt(&mut self, impulse: Float2, r: Float2) {
         self.velocity += impulse * self.inv_mass;
         self.angular_velocity += r.cross(impulse) * self.inv_inertia;
     }
-
+    pub fn apply_impulse(&mut self, impulse: Float2) {
+        self.velocity += impulse * self.inv_mass;
+    }
+    pub fn apply_angular_impulse(&mut self, impulse: f32) {
+        self.angular_velocity += impulse * self.inv_inertia;
+    }
+    pub fn apply_angular_impulse_at(&mut self, torque_impulse: f32, world_point: Float2) {
+        let r = world_point - self.position;
+        let r_len = r.length();
+        if r_len < 1e-6 {
+            self.angular_velocity += torque_impulse * self.inv_inertia;
+            return;
+        }
+        let tangent = Float2::new(-r.y, r.x) / r_len;
+        let force_mag = torque_impulse / r_len;
+        let impulse = tangent * force_mag;
+        self.velocity += impulse * self.inv_mass;
+        self.angular_velocity += r.cross(impulse) * self.inv_inertia;
+    }
     /// Velocity of a point fixed to this body at PhysicsWorld-space offset `r`.
     pub fn velocity_at(&self, r: Float2) -> Float2 {
         self.velocity + Float2::cross_scalar_vec(self.angular_velocity, r)
@@ -167,6 +185,20 @@ impl RigidBody {
 
     pub fn aabb(&self) -> Aabb {
         self.shape.aabb(self.position, self.rotation)
+    }
+
+    pub fn apply_torque_at(&mut self, torque: f32, world_point: Float2) {
+        let r = world_point - self.position;
+        let r_len = r.length();
+        if r_len < 1e-6 {
+            self.torque += torque;
+            return;
+        }
+        let tangent = Float2::new(-r.y, r.x) / r_len;
+        let force_mag = torque / r_len;
+        let f = tangent * force_mag;
+        self.force += f;
+        self.torque += r.cross(f);
     }
 
     pub fn integrate(&mut self, dt: f32, gravity: Float2) {

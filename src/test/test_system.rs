@@ -73,61 +73,62 @@ impl SystemBase for TestSystem {
                 world.add_component(e, rb);
             }
 
-            const LENGTH: usize = 2;
+            const LENGTH: usize = 10;
             let mut bodies: Vec<Entity> = Vec::new();
-            for i in 0..LENGTH {
+            for _ in 0..LENGTH {
                 bodies.push(world.create_entity());
             }
-            for x in 0..LENGTH {
-                let entity = bodies[x]; // Removed the accidental bodies.push(entity)
+            for y in 0..10 {
+                for x in 0..LENGTH {
+                    let entity = bodies[x];
 
-                let mut cxn_a: Option<PhysCxn> = None;
-                let mut cxn_b: Option<PhysCxn> = None;
+                    let mut cxn_a: Option<PhysCxn> = None;
+                    let mut cxn_b: Option<PhysCxn> = None;
 
-                // Link to the previous entity (if we aren't the first one)
-                if x > 0 {
-                    cxn_a = Some(PhysCxn::new(bodies[x - 1], Float2::new(-1.0, 0.0)));
-                }
+                    // Link to the PREVIOUS entity: The anchor should be on our LEFT side (-0.5)
+                    if x > 0 {
+                        cxn_a = Some(PhysCxn::new(bodies[x - 1], Float2::new(-1.0, 0.0)));
+                    }
 
-                // Link to the next entity (if we aren't the last one) safely
-                if x < LENGTH - 1 {
-                    cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
-                }
+                    // Link to the NEXT entity: The anchor should be on our RIGHT side (0.5)
+                    if x < LENGTH - 1 {
+                        cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
+                    }
 
-                let pos = Float2::new(x as f32, 0.0);
+                    let pos = Float2::new(x as f32, y as f32);
 
-                world.add_component(
-                    entity,
-                    Transform {
-                        position: pos,
-                        rotation: 0.0,
-                    },
-                );
-
-                world.add_component(entity, sprite_cmpt.clone());
-
-                world.add_component(
-                    entity,
-                    crate::runtime::phys::RigidBody::new(
-                        crate::runtime::phys::Shape::Rect {
-                            half_w: 0.5,
-                            half_h: 0.5,
+                    world.add_component(
+                        entity,
+                        Transform {
+                            position: pos,
+                            rotation: 0.0,
                         },
-                        1.0,
-                        pos,
-                        0.0,
-                    ),
-                );
+                    );
 
-                // Now both connections are stored properly!
-                world.add_component(
-                    entity,
-                    crate::runtime::phys::connector::PhysJoint::new(
-                        10.0,
-                        10.0,
-                        [cxn_a, None, None, None],
-                    ),
-                );
+                    world.add_component(entity, sprite_cmpt.clone());
+
+                    world.add_component(
+                        entity,
+                        crate::runtime::phys::RigidBody::new(
+                            crate::runtime::phys::Shape::Rect {
+                                half_w: 0.5,
+                                half_h: 0.5,
+                            },
+                            1.0,
+                            pos,
+                            0.0,
+                        ),
+                    );
+
+                    world.add_component(
+                        entity,
+                        crate::runtime::phys::connector::PhysJoint::new(
+                            10.0,
+                            10.0,
+                            [cxn_a, cxn_b, None, None],
+                        ),
+                    );
+                }
             }
         }
     }
