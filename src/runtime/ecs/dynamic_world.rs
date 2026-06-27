@@ -12,7 +12,7 @@ pub struct Entity(pub usize);
 type StaticTypeId = u64;
 
 pub struct DynamicWorld {
-    storages: RwLock<HashMap<TypeId, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>,
+    storages: RwLock<HashMap<StaticTypeId, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>,
     alive: RwLock<Vec<bool>>,
     entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
@@ -101,11 +101,7 @@ impl DynamicWorld {
     fn storage_arc<T: StableTypeId + Any + Send + Sync + 'static>(
         &self,
     ) -> Option<Arc<RwLock<Box<dyn Any + Send + Sync>>>> {
-        self.storages
-            .read()
-            .unwrap()
-            .get(&TypeId::of::<T>())
-            .cloned()
+        self.storages.read().unwrap().get(&T::ID).cloned()
     }
 
     fn with_storage<T, R>(&self, f: impl FnOnce(&ComponentStore<T>) -> R) -> Option<R>
@@ -173,7 +169,7 @@ impl DynamicWorld {
         self.storages
             .write()
             .unwrap()
-            .entry(TypeId::of::<T>())
+            .entry(T::ID)
             .or_insert_with(|| Arc::new(RwLock::new(Box::new(ComponentStore::<T>::new()))));
     }
 
