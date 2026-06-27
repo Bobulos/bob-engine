@@ -46,14 +46,16 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
-            const TEST_MASS: f32 = 1.1;
+            const TEST_MASS: f32 = 0.01;
             const TEST_VEL: f32 = 50.0;
-            for _ in 0..1000 {
+            for _ in 0..10 {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
                     (rand::random::<f32>() * 2000.0 - 1000.0),
                 );
+
+                //let pos = Float2::new(-1000.0, 0.0);
                 //let pos = Float2::new(5.0, -100.0);
                 let rot = math::angle_to_point(pos, targ) + std::f32::consts::PI / 2.0;
                 world.add_component(

@@ -1,3 +1,4 @@
+use crate::StableTypeId;
 /// A query filter that restricts which entities are returned.
 ///
 /// Implement this to add arbitrary per entity conditions on top of a tuple query.
@@ -10,30 +11,30 @@ pub trait QueryFilter: Send + Sync {
 }
 
 // With<T>
-pub struct With<T: Any + Send + Sync + 'static>(PhantomData<T>);
+pub struct With<T: StableTypeId + Any + Send + Sync + 'static>(PhantomData<T>);
 
-impl<T: Any + Send + Sync + 'static> With<T> {
+impl<T: StableTypeId + Any + Send + Sync + 'static> With<T> {
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: Any + Send + Sync + 'static> QueryFilter for With<T> {
+impl<T: StableTypeId + Any + Send + Sync + 'static> QueryFilter for With<T> {
     fn matches(&self, entity_id: usize, world: &DynamicWorld) -> bool {
         world.has_component::<T>(entity_id)
     }
 }
 
 // Without<T>
-pub struct Without<T: Any + Send + Sync + 'static>(PhantomData<T>);
+pub struct Without<T: StableTypeId + Any + Send + Sync + 'static>(PhantomData<T>);
 
-impl<T: Any + Send + Sync + 'static> Without<T> {
+impl<T: StableTypeId + Any + Send + Sync + 'static> Without<T> {
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: Any + Send + Sync + 'static> QueryFilter for Without<T> {
+impl<T: StableTypeId + Any + Send + Sync + 'static> QueryFilter for Without<T> {
     fn matches(&self, entity_id: usize, world: &DynamicWorld) -> bool {
         !world.has_component::<T>(entity_id)
     }

@@ -53,6 +53,12 @@ impl Engine {
         self.setup_world();
         self.setup_renderer();
         self.setup_systems();
+
+        self.entities
+            .worlds
+            .get(MAIN_WORLD)
+            .unwrap()
+            .get_included_components();
         println!("Engine initialized");
     }
 
@@ -125,7 +131,7 @@ impl Engine {
         self.render().expect("Renderer fatal error");
 
         let elapsed = Instant::now() - frame_start;
-        print!("\rFrame time: {:.2} ms", elapsed.as_secs_f64() * 1000.0);
+        //print!("\rFrame time: {:.2} ms", elapsed.as_secs_f64() * 1000.0);
         if elapsed > target_frame_time {
             println!("Engine running at reduced clock");
         }

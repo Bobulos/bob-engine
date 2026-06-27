@@ -22,6 +22,7 @@ winit = "0.30"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 seahash = "4.1.0"
+component_macro = { path = "./macros/component_macro" }
 # Use the latest version available (0.17+ as of early 2026)
 # sdl3 = { version = "0.17", features = ["raw-window-handle"] }
 # easy-sdl3-text = "0.4.1"

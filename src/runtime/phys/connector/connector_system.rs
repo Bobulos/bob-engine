@@ -4,15 +4,18 @@ use crate::runtime::math::Float2;
 use crate::runtime::phys::RigidBody;
 use crate::runtime::phys::connector::phys_joint::PhysJoint;
 use std::sync::Arc;
+use std::thread::sleep;
+use std::time::Duration;
+use std::time::Instant;
 
 const FIXED_DT: f32 = 1.0 / 60.0;
-const SOLVER_ITERATIONS: usize = 1;
+const SOLVER_ITERATIONS: usize = 4;
 const SPRING_CO: f32 = 0.9999999;
-const MAX_BROKEN: usize = 1024;
+const MAX_BROKEN: usize = 128;
 
 pub struct ConnectorSystem {
     /// Caches: ent a, vel, ent b, inv, ang, pos, rot
-    pub joint_cache: Vec<(Entity, Float2, Entity, f32, f32, Float2, f32)>,
+    pub joint_cache: Vec<(Entity, Float2, Entity, f32, f32, Float2)>,
 }
 
 impl ConnectorSystem {
@@ -27,6 +30,7 @@ impl SystemBase for ConnectorSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
+        //let start = Instant::now();
         self.joint_cache.clear();
 
         world.for_each3_mut::<Transform, RigidBody, PhysJoint>(|entity, _transform, rb, joint| {
@@ -42,7 +46,6 @@ impl SystemBase for ConnectorSystem {
                         rb.inv_inertia,
                         rb.angular_velocity,
                         rb.position,
-                        rb.rotation,
                     ));
                 }
             }
@@ -62,7 +65,6 @@ impl SystemBase for ConnectorSystem {
                 let host_inv_inertia = jnt.3;
                 let host_ang_vel = jnt.4;
                 let host_pos = jnt.5;
-                let host_rot = jnt.6;
 
                 let anchor_world = host_pos;
 
@@ -120,7 +122,7 @@ impl SystemBase for ConnectorSystem {
                             0.0
                         };
 
-                        target_rb.apply_angular_impulse(ang_impulse);
+                        target_rb.apply_angular_impulse(ang_impulse.clamp(-1.0, 1.0));
 
                         // break the joint
                         let separation = Float2::distance(host_pos, target_rb.position);
@@ -142,7 +144,9 @@ impl SystemBase for ConnectorSystem {
                         let host_torque_impulse =
                             (r_host.x * host_impulse.y) - (r_host.y * host_impulse.x);
 
-                        host_rb.apply_angular_impulse(host_torque_impulse - ang_impulse);
+                        host_rb.apply_angular_impulse(
+                            (host_torque_impulse - ang_impulse).clamp(-1.0, 1.0),
+                        );
                     });
                 }
             }
@@ -159,6 +163,9 @@ impl SystemBase for ConnectorSystem {
             });
             world.remove_component::<PhysJoint>(broken_cxns[i].0);
         }
+        //let duration = start.elapsed();
+
+        //println!("Time elapsed for cxn's: {:?}", duration);
     }
 
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}

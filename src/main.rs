@@ -19,6 +19,7 @@ pub mod test;
 // pub mod tilemap;
 
 use crate::app::App;
+pub use component_macro::Component;
 use winit::event_loop::EventLoop;
 mod app;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,4 +28,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::default();
     event_loop.run_app(&mut app)?;
     Ok(())
+}
+
+// MARCOS
+pub trait StableTypeId {
+    const ID: u64;
 }

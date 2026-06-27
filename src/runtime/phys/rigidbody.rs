@@ -1,3 +1,5 @@
+use component_macro::Component;
+
 use crate::runtime::math::Float2;
 use crate::runtime::phys::Aabb;
 use crate::runtime::phys::Shape;
@@ -80,7 +82,7 @@ use crate::runtime::phys::Shape;
 //     self.torque = 0.0;
 // }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Component)]
 pub struct RigidBody {
     // Pose
     pub position: Float2,

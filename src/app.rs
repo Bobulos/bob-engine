@@ -33,8 +33,8 @@ impl ApplicationHandler for App {
                 WINDOW_SIZE.1,
             ))));
             //attributes.fullscreen = Some(Fullscreen::Borderless(None));
-            let asset_store = Arc::new(OnceLock::new());
-            asset_store.set(AssetStore::new().init()).unwrap();
+            // let asset_store = Arc::new(OnceLock::new());
+            // asset_store.set(AssetStore::new().init()).unwrap();
             let window = Arc::new(event_loop.create_window(attributes).unwrap());
 
             let mut renderer = rendering::Renderer::new();
