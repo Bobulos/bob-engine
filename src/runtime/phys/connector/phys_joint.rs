@@ -12,7 +12,7 @@ impl PhysCxn {
     }
 }
 
-#[derive(Debug, Clone, Copy, Component)]
+#[derive(Debug, Clone, Copy, Component, Default)]
 pub struct PhysJoint {
     pub is_intact: bool,
     pub cxn_strength_ln_sq: f32,

@@ -2,7 +2,7 @@ use component_macro::Component;
 
 use crate::runtime::math::Float2;
 
-#[derive(Debug, Clone, Copy, Component)]
+#[derive(Debug, Clone, Copy, Component, Default)]
 pub struct Transform {
     pub position: Float2,
     pub rotation: f32,

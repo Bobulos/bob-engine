@@ -1,3 +1,5 @@
+use std::any::Any;
+
 /// Stores components of type `T` densely indexed by entity ID.
 pub struct ComponentStore<T> {
     components: Vec<Option<T>>,
@@ -5,7 +7,9 @@ pub struct ComponentStore<T> {
 
 impl<T> ComponentStore<T> {
     pub fn new() -> Self {
-        Self { components: Vec::new() }
+        Self {
+            components: Vec::new(),
+        }
     }
 
     pub fn insert(&mut self, entity_id: usize, component: T) {

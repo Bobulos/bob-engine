@@ -5,7 +5,11 @@ pub enum Shape {
     Circle { radius: f32 },
     Rect { half_w: f32, half_h: f32 },
 }
-
+impl Default for Shape {
+    fn default() -> Self {
+        Shape::Circle { radius: 1.0 }
+    }
+}
 impl Shape {
     /// Moment of inertia for a unit mass. Caller scales by actual mass.
     pub fn inertia_factor(&self) -> f32 {
