@@ -1,11 +1,11 @@
 use std::any::Any;
 
 /// Stores components of type `T` densely indexed by entity ID.
-pub struct ComponentStore<T> {
+pub struct ComponentStore<T: Any + Default> {
     components: Vec<Option<T>>,
 }
 
-impl<T> ComponentStore<T> {
+impl<T: Any + Default> ComponentStore<T> {
     pub fn new() -> Self {
         Self {
             components: Vec::new(),
@@ -49,5 +49,31 @@ impl<T> ComponentStore<T> {
 
     pub fn len(&self) -> usize {
         self.components.len()
+    }
+}
+pub trait AnyComponentStore: Any + Send + Sync {
+    fn insert_default(&mut self, entity: usize);
+    fn remove(&mut self, entity: usize);
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+
+impl<T: Any + Send + Sync> AnyComponentStore for ComponentStore<T>
+where
+    T: Default + Any + Send + Sync + 'static,
+{
+    fn remove(&mut self, entity: usize) {
+        self.remove(entity);
+    }
+    fn insert_default(&mut self, entity: usize) {
+        self.insert(entity, T::default());
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

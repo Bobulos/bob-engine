@@ -1,3 +1,4 @@
+pub mod component_manifest;
 pub mod component_store;
 pub mod core_components;
 pub mod dynamic_world;

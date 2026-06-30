@@ -46,6 +46,7 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
+
             const TEST_MASS: f32 = 0.01;
             const TEST_VEL: f32 = 50.0;
             for _ in 0..10 {
@@ -135,6 +136,19 @@ impl SystemBase for TestSystem {
                     );
                 }
             }
+            // let t_e = world.create_entity();
+            // world.add_component_with_stable_type_id(t_e, 7897511584434135542);
+            // world.add_component(
+            //     t_e,
+            //     Sprite::new(
+            //         self.other_handle.unwrap(),
+            //         32,
+            //         32,
+            //         true,
+            //         [0.0, 0.0],
+            //         [0.5, 1.0],
+            //     ),
+            // );
         }
     }
     fn on_update(&mut self, _world: &Arc<DynamicWorld>) {}

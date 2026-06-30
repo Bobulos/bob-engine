@@ -1,19 +1,21 @@
 use crate::StableTypeId;
+use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;
+use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::query::QueryFilter;
+use crate::runtime::math::Float2;
 use component_macro::Component;
 use std::any::type_name;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Entity(pub usize);
 type StaticTypeId = u64;
 
 pub struct DynamicWorld {
-    storages: RwLock<HashMap<StaticTypeId, Arc<RwLock<Box<dyn Any + Send + Sync>>>>>,
-    inserters: RwLock<HashMap<StaticTypeId, Box<dyn Fn(&DynamicWorld, Entity) + Send + Sync>>>,
+    storages: RwLock<HashMap<StaticTypeId, Arc<RwLock<Box<dyn AnyComponentStore>>>>>,
+    //inserters: RwLock<HashMap<StaticTypeId, Box<dyn Fn(&DynamicWorld, Entity) + Send + Sync>>>,
     alive: RwLock<Vec<bool>>,
     entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
@@ -35,7 +37,7 @@ macro_rules! impl_for_each {
                     None => return,
                 };
                 let $var = $var.read().unwrap();
-                let $var = $var.downcast_ref::<ComponentStore<$t>>().unwrap();
+                let $var = $var.as_any().downcast_ref::<ComponentStore<$t>>().unwrap();
             )+
 
             for id in 0..count {
@@ -72,7 +74,7 @@ macro_rules! impl_for_each_mut {
                     None => return,
                 };
                 let mut $var = $var.write().unwrap();
-                let $var = $var.downcast_mut::<ComponentStore<$t>>().unwrap();
+                let $var = $var.as_any_mut().downcast_mut::<ComponentStore<$t>>().unwrap();
             )+
 
             for id in 0..count {
@@ -91,7 +93,7 @@ impl DynamicWorld {
     pub fn new() -> Self {
         Self {
             storages: RwLock::new(HashMap::new()),
-            inserters: RwLock::new(HashMap::new()),
+            //inserters: RwLock::new(HashMap::new()),
             alive: RwLock::new(Vec::new()),
             entities_count: RwLock::new(0),
             static_type_ids: RwLock::new(HashMap::new()),
@@ -102,7 +104,8 @@ impl DynamicWorld {
 
     fn storage_arc<T: StableTypeId + Default + Any + Send + Sync + 'static>(
         &self,
-    ) -> Option<Arc<RwLock<Box<dyn Any + Send + Sync>>>> {
+    ) -> Option<Arc<RwLock<Box<dyn AnyComponentStore>>>> {
+        //self.storages.read().unwrap().get(&T::ID).cloned()
         self.storages.read().unwrap().get(&T::ID).cloned()
     }
 
@@ -112,7 +115,7 @@ impl DynamicWorld {
     {
         let arc = self.storage_arc::<T>()?;
         let guard = arc.read().unwrap();
-        let store = guard.downcast_ref::<ComponentStore<T>>()?;
+        let store = guard.as_any().downcast_ref::<ComponentStore<T>>()?;
         Some(f(store))
     }
 
@@ -122,7 +125,7 @@ impl DynamicWorld {
     {
         let arc = self.storage_arc::<T>()?;
         let mut guard = arc.write().unwrap();
-        let store = guard.downcast_mut::<ComponentStore<T>>()?;
+        let store = guard.as_any_mut().downcast_mut::<ComponentStore<T>>()?;
         Some(f(store))
     }
 
@@ -161,9 +164,7 @@ impl DynamicWorld {
 
     // Component CRUD
 
-    pub fn register_component<T: StableTypeId + Default + Default + Any + Send + Sync + 'static>(
-        &self,
-    ) {
+    pub fn register_component<T: StableTypeId + Default + Any + Send + Sync + 'static>(&self) {
         self.static_type_ids
             .write()
             .unwrap()
@@ -176,22 +177,22 @@ impl DynamicWorld {
             .entry(T::ID)
             .or_insert_with(|| Arc::new(RwLock::new(Box::new(ComponentStore::<T>::new()))));
 
-        // Capture the concrete type at registration time
-        self.inserters
-            .write()
-            .unwrap()
-            .entry(T::ID)
-            .or_insert_with(|| {
-                Box::new(|world: &DynamicWorld, entity: Entity| {
-                    world.add_component::<T>(entity, T::default());
-                })
-            });
+        // // Capture the concrete type at registration time
+        // self.inserters
+        //     .write()
+        //     .unwrap()
+        //     .entry(T::ID)
+        //     .or_insert_with(|| {
+        //         Box::new(|world: &DynamicWorld, entity: Entity| {
+        //             world.add_component::<T>(entity, T::default());
+        //         })
+        //     });
     }
     // Try this one ?
     pub fn add_component_with_stable_type_id(&self, entity: Entity, id: StaticTypeId) {
-        let inserters = self.inserters.read().unwrap();
-        if let Some(f) = inserters.get(&id) {
-            f(self, entity);
+        let lock = self.storages.read().unwrap();
+        if let Some(store) = lock.get(&id) {
+            store.write().unwrap().insert_default(entity.0);
         }
     }
 
@@ -254,13 +255,16 @@ impl DynamicWorld {
             None => return,
         };
         let guard_a = arc_a.read().unwrap();
-        let sa = guard_a.downcast_ref::<ComponentStore<A>>().unwrap();
+        let sa = guard_a
+            .as_any()
+            .downcast_ref::<ComponentStore<A>>()
+            .unwrap();
 
         let arc_b = self.storage_arc::<B>();
         let guard_b = arc_b.as_ref().map(|a| a.read().unwrap());
         let sb = guard_b
             .as_ref()
-            .and_then(|g| g.downcast_ref::<ComponentStore<B>>());
+            .and_then(|g| g.as_any().downcast_ref::<ComponentStore<B>>());
 
         for id in 0..count {
             if !alive.get(id).copied().unwrap_or(false) {
@@ -309,7 +313,10 @@ impl DynamicWorld {
             None => return,
         };
         let mut guard_a = arc_a.write().unwrap();
-        let sa = guard_a.downcast_mut::<ComponentStore<A>>().unwrap();
+        let sa = guard_a
+            .as_any_mut()
+            .downcast_mut::<ComponentStore<A>>()
+            .unwrap();
 
         for id in 0..count {
             if !alive.get(id).copied().unwrap_or(false) {
@@ -373,8 +380,14 @@ impl DynamicWorld {
         };
         let mut guard_a = arc_a.write().unwrap();
         let guard_b = arc_b.read().unwrap();
-        let sa = guard_a.downcast_mut::<ComponentStore<A>>().unwrap();
-        let sb = guard_b.downcast_ref::<ComponentStore<B>>().unwrap();
+        let sa = guard_a
+            .as_any_mut()
+            .downcast_mut::<ComponentStore<A>>()
+            .unwrap();
+        let sb = guard_b
+            .as_any()
+            .downcast_ref::<ComponentStore<B>>()
+            .unwrap();
 
         for id in 0..count {
             if !alive.get(id).copied().unwrap_or(false) {
@@ -427,9 +440,18 @@ impl DynamicWorld {
         let mut guard_a = arc_a.write().unwrap();
         let mut guard_b = arc_b.write().unwrap();
         let guard_c = arc_c.read().unwrap();
-        let sa = guard_a.downcast_mut::<ComponentStore<A>>().unwrap();
-        let sb = guard_b.downcast_mut::<ComponentStore<B>>().unwrap();
-        let sc = guard_c.downcast_ref::<ComponentStore<C>>().unwrap();
+        let sa = guard_a
+            .as_any_mut()
+            .downcast_mut::<ComponentStore<A>>()
+            .unwrap();
+        let sb = guard_b
+            .as_any_mut()
+            .downcast_mut::<ComponentStore<B>>()
+            .unwrap();
+        let sc = guard_c
+            .as_any()
+            .downcast_ref::<ComponentStore<C>>()
+            .unwrap();
 
         for id in 0..count {
             if !alive.get(id).copied().unwrap_or(false) {
