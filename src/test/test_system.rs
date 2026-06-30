@@ -5,10 +5,8 @@ use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{self, Float2};
 use crate::runtime::phys::connector::PhysCxn;
-use crate::runtime::phys::connector::PhysJoint;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, OnceLock};
-use std::vec;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
 
@@ -53,7 +51,7 @@ impl SystemBase for TestSystem {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
-                    (rand::random::<f32>() * 2000.0 - 1000.0),
+                    rand::random::<f32>() * 2000.0 - 1000.0 ,
                 );
 
                 //let pos = Float2::new(-1000.0, 0.0);

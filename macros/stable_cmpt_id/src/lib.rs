@@ -1,8 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
-
-#[proc_macro_derive(Component)]
+#[proc_macro_derive(StableID)]
 pub fn derive_stable_type_id(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
@@ -12,7 +11,7 @@ pub fn derive_stable_type_id(input: TokenStream) -> TokenStream {
     let name_str = name.to_string();
 
     let expanded = quote! {
-        impl #impl_generics crate::StableTypeId for #name #ty_generics #where_clause {
+        impl #impl_generics crate::StableTypeID for #name #ty_generics #where_clause {
             const ID: u64 = {
                 let path = concat!(module_path!(), "::", #name_str);
 

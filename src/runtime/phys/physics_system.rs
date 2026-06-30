@@ -6,6 +6,7 @@ use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
 use crate::runtime::phys::physics_config::PhysicsConfig;
 pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
 use std::sync::Arc;
+use std::time::Instant;
 
 pub struct PhysicsSystem {
     pub config: PhysicsConfig,
@@ -242,7 +243,9 @@ impl SystemBase for PhysicsSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
+        let start = Instant::now();
         self.step(world);
+        println!("Physics took {}", start.elapsed().as_millis());
     }
 
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}

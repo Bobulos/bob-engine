@@ -1,7 +1,7 @@
+use crate::Component;
 use crate::runtime::assets::AssetHandle;
-use component_macro::Component;
 
-#[derive(Debug, Clone, Copy, Component, Default)]
+#[derive(Component!)]
 pub struct Sprite {
     pub batch_index: usize,
     /// Index into Renderer.batches

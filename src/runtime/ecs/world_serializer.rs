@@ -1,6 +1,6 @@
-pub struct ComponentManifest {}
+pub struct WorldSerializer {}
 
-impl ComponentManifest {
+impl WorldSerializer {
     pub fn new() -> Self {
         Self {}
     }

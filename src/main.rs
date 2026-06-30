@@ -17,9 +17,10 @@ pub mod test;
 // pub mod runtime;
 // #[path = "engine/rendering/tilemap/mod.rs"]
 // pub mod tilemap;
-
 use crate::app::App;
-pub use component_macro::Component;
+use serde::Deserialize;
+use serde::Serialize;
+pub use stable_cmpt_id::StableID;
 use winit::event_loop::EventLoop;
 mod app;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,6 +32,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 // MARCOS
-pub trait StableTypeId {
+pub trait StableTypeID {
     const ID: u64;
+}
+
+// Shorten the component use
+#[macro_use]
+extern crate macro_rules_attribute;
+derive_alias! {
+    #[derive(Component!)] = #[derive(Clone, Default, stable_cmpt_id::StableID, Copy, serde::Serialize, serde::Deserialize)];
 }

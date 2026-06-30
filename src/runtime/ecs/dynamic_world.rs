@@ -1,11 +1,7 @@
-use crate::StableTypeId;
+use crate::StableTypeID;
 use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;
-use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::query::QueryFilter;
-use crate::runtime::math::Float2;
-use component_macro::Component;
-use std::any::type_name;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -25,7 +21,7 @@ macro_rules! impl_for_each {
     ($name:ident, $($t:ident => $var:ident),+) => {
         pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&$t),*))
         where
-            $($t: StableTypeId + Default + Any + Send + Sync + 'static),*
+            $($t: StableTypeID + Default + Any + Send + Sync + 'static),*
         {
             let count = *self.entities_count.read().unwrap();
             let alive = self.alive.read().unwrap();
@@ -54,7 +50,7 @@ macro_rules! impl_for_each_mut {
     ($name:ident, $($t:ident => $var:ident),+) => {
         pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&mut $t),*))
         where
-            $($t: StableTypeId + Default + Any + Send + Sync + 'static),*
+            $($t: StableTypeID + Default + Any + Send + Sync + 'static),*
         {
             let mut types = std::collections::HashSet::new();
             $(
@@ -101,7 +97,7 @@ impl DynamicWorld {
 
     //  Internal storage helpers
 
-    fn storage_arc<T: StableTypeId + Default + Any + Send + Sync + 'static>(
+    fn storage_arc<T: StableTypeID + Default + Any + Send + Sync + 'static>(
         &self,
     ) -> Option<Arc<RwLock<Box<dyn AnyComponentStore>>>> {
         //self.storages.read().unwrap().get(&T::ID).cloned()
@@ -110,7 +106,7 @@ impl DynamicWorld {
 
     fn with_storage<T, R>(&self, f: impl FnOnce(&ComponentStore<T>) -> R) -> Option<R>
     where
-        T: StableTypeId + Default + Any + Send + Sync + 'static,
+        T: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         let arc = self.storage_arc::<T>()?;
         let guard = arc.read().unwrap();
@@ -120,7 +116,7 @@ impl DynamicWorld {
 
     fn with_storage_mut<T, R>(&self, f: impl FnOnce(&mut ComponentStore<T>) -> R) -> Option<R>
     where
-        T: StableTypeId + Default + Any + Send + Sync + 'static,
+        T: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         let arc = self.storage_arc::<T>()?;
         let mut guard = arc.write().unwrap();
@@ -163,7 +159,7 @@ impl DynamicWorld {
 
     // Component CRUD
 
-    pub fn register_component<T: StableTypeId + Default + Any + Send + Sync + 'static>(&self) {
+    pub fn register_component<T: StableTypeID + Default + Any + Send + Sync + 'static>(&self) {
         self.static_type_ids
             .write()
             .unwrap()
@@ -195,7 +191,7 @@ impl DynamicWorld {
         }
     }
 
-    pub fn add_component<T: StableTypeId + Default + Any + Send + Sync + 'static>(
+    pub fn add_component<T: StableTypeID + Default + Any + Send + Sync + 'static>(
         &self,
         entity: Entity,
         component: T,
@@ -204,21 +200,21 @@ impl DynamicWorld {
         self.with_storage_mut::<T, _>(|s| s.insert(entity.0, component));
     }
 
-    pub fn remove_component<T: StableTypeId + Default + Any + Send + Sync + 'static>(
+    pub fn remove_component<T: StableTypeID + Default + Any + Send + Sync + 'static>(
         &self,
         entity: Entity,
     ) {
         self.with_storage_mut::<T, _>(|s| s.remove(entity.0));
     }
 
-    pub fn get_clone<T: StableTypeId + Default + Any + Send + Sync + Clone + 'static>(
+    pub fn get_clone<T: StableTypeID + Default + Any + Send + Sync + Clone + 'static>(
         &self,
         entity: Entity,
     ) -> Option<T> {
         self.with_storage::<T, _>(|s| s.get(entity.0).cloned())?
     }
 
-    pub fn has_component<T: StableTypeId + Default + Any + Send + Sync + 'static>(
+    pub fn has_component<T: StableTypeID + Default + Any + Send + Sync + 'static>(
         &self,
         entity_id: usize,
     ) -> bool {
@@ -229,22 +225,22 @@ impl DynamicWorld {
     //  Optional Component Query
     pub fn get_component<T, R>(&self, entity: Entity, f: impl FnOnce(&T) -> R) -> Option<R>
     where
-        T: StableTypeId + Default + Any + Send + Sync + 'static,
+        T: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         self.with_storage::<T, _>(|store| store.get(entity.0).map(f))
             .flatten()
     }
     pub fn get_component_mut<T, R>(&self, entity: Entity, f: impl FnOnce(&mut T) -> R) -> Option<R>
     where
-        T: StableTypeId + Default + Any + Send + Sync + 'static,
+        T: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         self.with_storage_mut::<T, _>(|store| store.get_mut(entity.0).map(f))
             .flatten()
     }
     pub fn for_each_optional<A, B>(&self, mut f: impl FnMut(Entity, &A, Option<&B>))
     where
-        A: StableTypeId + Default + Any + Send + Sync + 'static,
-        B: StableTypeId + Default + Any + Send + Sync + 'static,
+        A: StableTypeID + Default + Any + Send + Sync + 'static,
+        B: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         let count = *self.entities_count.read().unwrap();
         let alive = self.alive.read().unwrap();
@@ -279,7 +275,7 @@ impl DynamicWorld {
 
     pub fn for_each_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &A))
     where
-        A: StableTypeId + Default + Any + Send + Sync + 'static,
+        A: StableTypeID + Default + Any + Send + Sync + 'static,
         F: QueryFilter,
     {
         let count = *self.entities_count.read().unwrap();
@@ -301,7 +297,7 @@ impl DynamicWorld {
 
     pub fn for_each_mut_filtered<A, F>(&self, filter: F, mut f: impl FnMut(Entity, &mut A))
     where
-        A: StableTypeId + Default + Any + Send + Sync + 'static,
+        A: StableTypeID + Default + Any + Send + Sync + 'static,
         F: QueryFilter,
     {
         let count = *self.entities_count.read().unwrap();
@@ -358,8 +354,8 @@ impl DynamicWorld {
     /// A mutable, B immutable.
     pub fn for_each2_mut<A, B>(&self, mut f: impl FnMut(Entity, &mut A, &B))
     where
-        A: StableTypeId + Default + Any + Send + Sync + 'static,
-        B: StableTypeId + Default + Any + Send + Sync + 'static,
+        A: StableTypeID + Default + Any + Send + Sync + 'static,
+        B: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         assert_ne!(
             TypeId::of::<A>(),
@@ -401,9 +397,9 @@ impl DynamicWorld {
     /// A and B mutable, C immutable.
     pub fn for_each3_mut<A, B, C>(&self, mut f: impl FnMut(Entity, &mut A, &mut B, &C))
     where
-        A: StableTypeId + Default + Any + Send + Sync + 'static,
-        B: StableTypeId + Default + Any + Send + Sync + 'static,
-        C: StableTypeId + Default + Any + Send + Sync + 'static,
+        A: StableTypeID + Default + Any + Send + Sync + 'static,
+        B: StableTypeID + Default + Any + Send + Sync + 'static,
+        C: StableTypeID + Default + Any + Send + Sync + 'static,
     {
         assert_ne!(
             TypeId::of::<A>(),

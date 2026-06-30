@@ -97,7 +97,7 @@ impl Float2 {
     /// Fast normalize using hardware reciprocal sqrt (SSE / NEON); may have
     /// ~1 ULP error.  Use `normalize` for full precision.
     #[inline]
-    pub fn normalize_fast(self) -> Self {
+    pub fn normalize_fast(self) -> Float2 {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
         {
             unsafe { normalize_fast_sse(self) }

@@ -1,5 +1,5 @@
+use crate::Component;
 use crate::runtime::{ecs::Entity, math::Float2};
-use component_macro::Component;
 
 #[derive(Debug, Clone, Copy)]
 pub struct PhysCxn {
@@ -12,7 +12,7 @@ impl PhysCxn {
     }
 }
 
-#[derive(Debug, Clone, Copy, Component, Default)]
+#[derive(Component!)]
 pub struct PhysJoint {
     pub is_intact: bool,
     pub cxn_strength_ln_sq: f32,

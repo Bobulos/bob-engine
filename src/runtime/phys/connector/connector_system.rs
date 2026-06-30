@@ -4,9 +4,6 @@ use crate::runtime::math::Float2;
 use crate::runtime::phys::RigidBody;
 use crate::runtime::phys::connector::phys_joint::PhysJoint;
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::Duration;
-use std::time::Instant;
 
 const FIXED_DT: f32 = 1.0 / 60.0;
 const SOLVER_ITERATIONS: usize = 4;
