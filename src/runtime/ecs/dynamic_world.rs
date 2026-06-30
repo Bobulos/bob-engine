@@ -15,7 +15,6 @@ type StaticTypeId = u64;
 
 pub struct DynamicWorld {
     storages: RwLock<HashMap<StaticTypeId, Arc<RwLock<Box<dyn AnyComponentStore>>>>>,
-    //inserters: RwLock<HashMap<StaticTypeId, Box<dyn Fn(&DynamicWorld, Entity) + Send + Sync>>>,
     alive: RwLock<Vec<bool>>,
     entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
@@ -189,7 +188,7 @@ impl DynamicWorld {
         //     });
     }
     // Try this one ?
-    pub fn add_component_with_stable_type_id(&self, entity: Entity, id: StaticTypeId) {
+    pub fn add_default_component_with_stable_type_id(&self, entity: Entity, id: StaticTypeId) {
         let lock = self.storages.read().unwrap();
         if let Some(store) = lock.get(&id) {
             store.write().unwrap().insert_default(entity.0);
