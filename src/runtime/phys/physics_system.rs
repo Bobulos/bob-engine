@@ -243,9 +243,9 @@ impl SystemBase for PhysicsSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
-        let start = Instant::now();
+        // let start = Instant::now();
         self.step(world);
-        println!("Physics took {}", start.elapsed().as_millis());
+        // println!("Physics took {}", start.elapsed().as_millis());
     }
 
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}

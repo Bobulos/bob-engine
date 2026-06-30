@@ -40,5 +40,5 @@ pub trait StableTypeID {
 #[macro_use]
 extern crate macro_rules_attribute;
 derive_alias! {
-    #[derive(Component!)] = #[derive(Clone, Default, stable_cmpt_id::StableID, Copy, serde::Serialize, serde::Deserialize)];
+    #[derive(Component!)] = #[derive(Clone, Default, stable_cmpt_id::StableID, Copy)];
 }

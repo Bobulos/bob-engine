@@ -96,23 +96,16 @@ impl Float2 {
 
     /// Fast normalize using hardware reciprocal sqrt (SSE / NEON); may have
     /// ~1 ULP error.  Use `normalize` for full precision.
-    #[inline]
-    pub fn normalize_fast(self) -> Float2 {
+    pub fn normalize_fast(self) -> Self {
         #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
         {
-            unsafe { normalize_fast_sse(self) }
+            return unsafe { normalize_fast_sse(self) };
         }
         #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
         {
-            unsafe { normalize_fast_neon_f32(self) }
+            return unsafe { normalize_fast_neon_f32(self) };
         }
-        #[cfg(not(any(
-            all(target_arch = "x86_64", target_feature = "sse"),
-            all(target_arch = "aarch64", target_feature = "neon")
-        )))]
-        {
-            self.normalize()
-        }
+        self.normalize()
     }
 
     /// 2-D "cross product" (scalar z of the 3-D cross product).
