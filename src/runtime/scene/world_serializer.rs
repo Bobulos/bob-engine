@@ -3,6 +3,7 @@ use std::fs::File;
 use std::{any::Any, sync::Arc};
 
 use crate::runtime::ecs::DynamicWorld;
+use crate::runtime::rendering::sprite_rendering::components;
 use crate::{
     Component, StableTypeID,
     runtime::ecs::{Entity, component_store::ComponentStore},
@@ -16,13 +17,13 @@ impl WorldSerializer {
     }
 }
 
-fn serialize_component<T: Default + Serialize + Deserialize<'static> + 'static>(
-    world: Arc<DynamicWorld>,
-    store: ComponentStore<T>,
-    entity: Entity,
-) {
-    world.
-    let c = store.get(entity.0);
-    let pretty_json = serde_json::to_string_pretty(&c.unwrap());
-    println!("Pretty:\n{}", pretty_json.unwrap());
+pub fn dump_entitys(world: &Arc<DynamicWorld>) {
+    let entity_count = *world.entities_count.read().unwrap();
+    let lock = world.storages.read().unwrap();
+    for e in 0..entity_count {
+        for store in lock.iter() {
+            let yert = store.1.read().unwrap().serialize_component(e);
+            println!("{}", yert);
+        }
+    }
 }

@@ -6,6 +6,7 @@ use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
 use crate::runtime::rendering;
 use crate::runtime::rendering::Renderer;
+use crate::runtime::scene::world_serializer;
 
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
@@ -217,6 +218,7 @@ impl Engine {
     }
     fn update_entities(&mut self) {
         self.entities.update_system_groups();
+        world_serializer::dump_entitys(&self.entities.get_world(MAIN_WORLD).unwrap());
     }
 
     // Setup bs

@@ -2,17 +2,39 @@ use crate::StableTypeID;
 use serde::Deserialize;
 use serde::Serialize;
 use std::any::Any;
+use wgpu::naga::compact::KeepUnused::No;
 
 type ComponentID = u64;
 /// Stores components of type `T` densely indexed by entity ID.
 pub struct ComponentStore<
-    T: StableTypeID + Default + Any + Send + Sync + Serialize + Deserialize<'static> + 'static,
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
 > {
     component_id: ComponentID,
     components: Vec<Option<T>>,
 }
 
-impl<T: Any + Default> ComponentStore<T> {
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> ComponentStore<T>
+{
     pub fn new(component_id: ComponentID) -> Self {
         Self {
             component_id,
@@ -58,21 +80,27 @@ impl<T: Any + Default> ComponentStore<T> {
     pub fn len(&self) -> usize {
         self.components.len()
     }
-
-    /// Pretty json oriented
-    pub fn serialize_component(&self, entity_id: usize) -> String {
-        let ser = serde_json::to_string_pretty(&self.get(entity_id).unwrap().clone());
-        ser.unwrap()
-    }
 }
 pub trait AnyComponentStore: Any + Send + Sync {
     fn insert_default(&mut self, entity: usize);
     fn remove(&mut self, entity: usize);
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn serialize_component(&self, entity_id: usize) -> String;
 }
 
-impl<T: Any + Send + Sync> AnyComponentStore for ComponentStore<T>
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> AnyComponentStore for ComponentStore<T>
 where
     T: Default + Any + Send + Sync + 'static,
 {
@@ -89,5 +117,14 @@ where
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    /// Pretty json oriented
+    fn serialize_component(&self, entity_id: usize) -> String {
+        if let Some(c) = &self.get(entity_id) {
+            let ser = serde_json::to_string_pretty(c);
+            return ser.unwrap();
+        }
+        String::new()
     }
 }

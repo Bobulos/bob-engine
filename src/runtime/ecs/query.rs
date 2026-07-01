@@ -4,6 +4,7 @@ use crate::StableTypeID;
 /// Implement this to add arbitrary per entity conditions on top of a tuple query.
 /// Common built-in filters: `With<T>`, `Without<T>`, `Changed<T>` (see below).
 use crate::runtime::ecs::dynamic_world::DynamicWorld;
+use serde::{Deserialize, Serialize};
 use std::any::Any;
 use std::marker::PhantomData;
 pub trait QueryFilter: Send + Sync {
@@ -11,30 +12,100 @@ pub trait QueryFilter: Send + Sync {
 }
 
 // With<T>
-pub struct With<T: StableTypeID + Default + Any + Send + Sync + 'static>(PhantomData<T>);
+pub struct With<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+>(PhantomData<T>);
 
-impl<T: StableTypeID + Default + Any + Send + Sync + 'static> With<T> {
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> With<T>
+{
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: StableTypeID + Default + Any + Send + Sync + 'static> QueryFilter for With<T> {
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> QueryFilter for With<T>
+{
     fn matches(&self, entity_id: usize, world: &DynamicWorld) -> bool {
         world.has_component::<T>(entity_id)
     }
 }
 
 // Without<T>
-pub struct Without<T: StableTypeID + Default + Any + Send + Sync + 'static>(PhantomData<T>);
+pub struct Without<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+>(PhantomData<T>);
 
-impl<T: StableTypeID + Default + Any + Send + Sync + 'static> Without<T> {
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> Without<T>
+{
     pub fn new() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: StableTypeID + Default + Any + Send + Sync + 'static> QueryFilter for Without<T> {
+impl<
+    T: StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,
+> QueryFilter for Without<T>
+{
     fn matches(&self, entity_id: usize, world: &DynamicWorld) -> bool {
         !world.has_component::<T>(entity_id)
     }

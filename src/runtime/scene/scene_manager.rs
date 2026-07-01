@@ -1,8 +1,7 @@
 use crate::runtime::scene::world_serializer::WorldSerializer;
 
 pub struct SceneManager {
-    
-    world_serializer: WorldSerializer,
+    pub world_serializer: WorldSerializer,
 }
 
 impl SceneManager {
