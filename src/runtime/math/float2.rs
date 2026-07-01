@@ -8,7 +8,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssi
 /// A 16-byte aligned pair of `f32` values backed by a 128-bit SIMD lane where
 /// available.  The public API is identical regardless of the backend chosen at
 /// compile time.
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[repr(C, align(16))]
 pub struct Float2 {
     pub x: f32,

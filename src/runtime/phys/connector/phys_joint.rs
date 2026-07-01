@@ -1,7 +1,7 @@
 use crate::Component;
 use crate::runtime::{ecs::Entity, math::Float2};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, crate::Serializable!)]
 pub struct PhysCxn {
     pub cxn: Entity,
     pub anc: Float2,

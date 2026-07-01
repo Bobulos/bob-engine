@@ -51,20 +51,20 @@ impl SystemBase for TestSystem {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
-                    rand::random::<f32>() * 2000.0 - 1000.0 ,
+                    rand::random::<f32>() * 2000.0 - 1000.0,
                 );
 
                 //let pos = Float2::new(-1000.0, 0.0);
                 //let pos = Float2::new(5.0, -100.0);
                 let rot = math::angle_to_point(pos, targ) + std::f32::consts::PI / 2.0;
-                world.add_component(
+                world.add_component_safe(
                     e,
                     Transform {
                         position: pos,
                         rotation: rot,
                     },
                 );
-                world.add_component(e, other_cmpt);
+                world.add_component_safe(e, other_cmpt);
                 let mut rb = crate::runtime::phys::RigidBody::new(
                     crate::runtime::phys::Shape::Circle { radius: 0.5 },
                     TEST_MASS,
@@ -73,7 +73,7 @@ impl SystemBase for TestSystem {
                 );
 
                 rb.velocity = (targ - pos).normalize() * TEST_VEL;
-                world.add_component(e, rb);
+                world.add_component_safe(e, rb);
             }
 
             const LENGTH: usize = 10;
@@ -101,7 +101,7 @@ impl SystemBase for TestSystem {
 
                     let pos = Float2::new(x as f32, 5.0 * y as f32);
 
-                    world.add_component(
+                    world.add_component_safe(
                         entity,
                         Transform {
                             position: pos,
@@ -109,9 +109,9 @@ impl SystemBase for TestSystem {
                         },
                     );
 
-                    world.add_component(entity, sprite_cmpt.clone());
+                    world.add_component_safe(entity, sprite_cmpt.clone());
 
-                    world.add_component(
+                    world.add_component_safe(
                         entity,
                         crate::runtime::phys::RigidBody::new(
                             crate::runtime::phys::Shape::Rect {
@@ -124,7 +124,7 @@ impl SystemBase for TestSystem {
                         ),
                     );
 
-                    world.add_component(
+                    world.add_component_safe(
                         entity,
                         crate::runtime::phys::connector::PhysJoint::new(
                             10.0,

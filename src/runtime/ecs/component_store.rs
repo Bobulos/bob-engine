@@ -1,13 +1,21 @@
+use crate::StableTypeID;
+use serde::Deserialize;
+use serde::Serialize;
 use std::any::Any;
 
+type ComponentID = u64;
 /// Stores components of type `T` densely indexed by entity ID.
-pub struct ComponentStore<T: Any + Default> {
+pub struct ComponentStore<
+    T: StableTypeID + Default + Any + Send + Sync + Serialize + Deserialize<'static> + 'static,
+> {
+    component_id: ComponentID,
     components: Vec<Option<T>>,
 }
 
 impl<T: Any + Default> ComponentStore<T> {
-    pub fn new() -> Self {
+    pub fn new(component_id: ComponentID) -> Self {
         Self {
+            component_id,
             components: Vec::new(),
         }
     }
@@ -49,6 +57,12 @@ impl<T: Any + Default> ComponentStore<T> {
 
     pub fn len(&self) -> usize {
         self.components.len()
+    }
+
+    /// Pretty json oriented
+    pub fn serialize_component(&self, entity_id: usize) -> String {
+        let ser = serde_json::to_string_pretty(&self.get(entity_id).unwrap().clone());
+        ser.unwrap()
     }
 }
 pub trait AnyComponentStore: Any + Send + Sync {

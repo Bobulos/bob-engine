@@ -1,3 +1,6 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::StableTypeID;
 use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;
@@ -5,23 +8,23 @@ use crate::runtime::ecs::query::QueryFilter;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Entity(pub usize);
-type StaticTypeId = u64;
+type ComponentID = u64;
 
 pub struct DynamicWorld {
-    storages: RwLock<HashMap<StaticTypeId, Arc<RwLock<Box<dyn AnyComponentStore>>>>>,
+    pub storages: RwLock<HashMap<ComponentID, Arc<RwLock<Box<dyn AnyComponentStore>>>>>,
     alive: RwLock<Vec<bool>>,
     entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
-    static_type_ids: RwLock<HashMap<StaticTypeId, TypeId>>,
+    static_type_ids: RwLock<HashMap<ComponentID, TypeId>>,
 }
 
 macro_rules! impl_for_each {
     ($name:ident, $($t:ident => $var:ident),+) => {
         pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&$t),*))
         where
-            $($t: StableTypeID + Default + Any + Send + Sync + 'static),*
+            $($t: StableTypeID + Default + Any + Send + Sync + Serialize + Deserialize<'static> + 'static),*
         {
             let count = *self.entities_count.read().unwrap();
             let alive = self.alive.read().unwrap();
@@ -50,7 +53,7 @@ macro_rules! impl_for_each_mut {
     ($name:ident, $($t:ident => $var:ident),+) => {
         pub fn $name<$($t),*>(&self, mut f: impl FnMut(Entity, $(&mut $t),*))
         where
-            $($t: StableTypeID + Default + Any + Send + Sync + 'static),*
+            $($t: StableTypeID + Default + Any + Send + Sync + Serialize + Deserialize<'static> + 'static),*
         {
             let mut types = std::collections::HashSet::new();
             $(
@@ -170,7 +173,7 @@ impl DynamicWorld {
             .write()
             .unwrap()
             .entry(T::ID)
-            .or_insert_with(|| Arc::new(RwLock::new(Box::new(ComponentStore::<T>::new()))));
+            .or_insert_with(|| Arc::new(RwLock::new(Box::new(ComponentStore::<T>::new(T::ID)))));
 
         // // Capture the concrete type at registration time
         // self.inserters
@@ -184,14 +187,32 @@ impl DynamicWorld {
         //     });
     }
     // Try this one ?
-    pub fn add_default_component_with_stable_type_id(&self, entity: Entity, id: StaticTypeId) {
+    pub fn add_default_component_with_stable_type_id(&self, entity: Entity, id: ComponentID) {
         let lock = self.storages.read().unwrap();
         if let Some(store) = lock.get(&id) {
             store.write().unwrap().insert_default(entity.0);
         }
     }
-
+    // pub fn get_component_with_stable_type_id(
+    //     &self,
+    //     entity: Entity,
+    //     id: StaticTypeId,
+    // ) -> Box<dyn Any> {
+    //     let lock = self.storages.read().unwrap();
+    //     if let Some(store) = lock.get(&id) {
+    //         store.write().unwrap().(entity.0);
+    //     }
+    // }
+    /// Faster but panics if the component hasn't already been registered
     pub fn add_component<T: StableTypeID + Default + Any + Send + Sync + 'static>(
+        &self,
+        entity: Entity,
+        component: T,
+    ) {
+        self.with_storage_mut::<T, _>(|s| s.insert(entity.0, component));
+    }
+    /// Adds and checks registration
+    pub fn add_component_safe<T: StableTypeID + Default + Any + Send + Sync + 'static>(
         &self,
         entity: Entity,
         component: T,
