@@ -1,4 +1,4 @@
-// ── Bindings ──────────────────────────────────────────────────────────────────
+// ── Bindings ─
 struct TilemapInfo {
     width:      u32,
     height:     u32,

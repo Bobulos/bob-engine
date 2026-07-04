@@ -8,6 +8,7 @@ use crate::runtime::rendering;
 use crate::runtime::rendering::Renderer;
 use crate::runtime::scene::world_serializer;
 
+use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 use std::time::Instant;
@@ -132,7 +133,7 @@ impl Engine {
         self.render().expect("Renderer fatal error");
 
         let elapsed = Instant::now() - frame_start;
-        //print!("\rFrame time: {:.2} ms", elapsed.as_secs_f64() * 1000.0);
+        print!("\rFrame time: {:.2} ms", elapsed.as_secs_f64() * 1000.0);
         if elapsed > target_frame_time {
             println!("Engine running at reduced clock");
         }
@@ -155,6 +156,10 @@ impl Engine {
         if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowLeft,
         )) {
+            world_serializer::create_scene_file_from_world(
+                String::from_str("Bingus").unwrap(),
+                &(self.entities.get_world(MAIN_WORLD).unwrap()),
+            );
             self.renderer
                 .write()
                 .unwrap()
@@ -218,7 +223,7 @@ impl Engine {
     }
     fn update_entities(&mut self) {
         self.entities.update_system_groups();
-        world_serializer::dump_entitys(&self.entities.get_world(MAIN_WORLD).unwrap());
+        //world_serializer::dump_entitys(&self.entities.get_world(MAIN_WORLD).unwrap());
     }
 
     // Setup bs

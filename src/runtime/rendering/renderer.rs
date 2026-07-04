@@ -23,7 +23,7 @@ pub enum PipelineKey {
     Custom(String),
 }
 
-// ── Batch ─────────────────────────────────────────────────────────────────────
+// ── Batch
 
 pub struct Batch {
     pub pipeline_key: PipelineKey,
@@ -40,10 +40,10 @@ pub struct PipelineConfig<'a> {
     pub blend: wgpu::BlendState,
     // extend later: depth_stencil, primitive, etc.
 }
-// ── Renderer ──────────────────────────────────────────────────────────────────
+// ── Renderer
 
 pub struct Renderer {
-    // ── wgpu core ────────────────────────────────────────────────────────────
+    // ── wgpu core
     instance: wgpu::Instance,
     adapter: Option<wgpu::Adapter>,
     surface: Option<wgpu::Surface<'static>>,
@@ -51,31 +51,34 @@ pub struct Renderer {
     queue: Option<wgpu::Queue>,
     config: Option<wgpu::SurfaceConfiguration>,
 
-    // ── pipeline ─────────────────────────────────────────────────────────────
-    pipeline: Option<wgpu::RenderPipeline>,
+    // ── pipeline
     bind_group_layout: Option<wgpu::BindGroupLayout>,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 
-    // ── shared geometry ───────────────────────────────────────────────────────
+    // ── shared geometry
     vertex_buffer: Option<wgpu::Buffer>,
     index_buffer: Option<wgpu::Buffer>,
     num_indices: u32,
 
-    // ── camera ───────────────────────────────────────────────────────────────
+    // ── camera
     pub camera: Camera,
     camera_buffer: Option<wgpu::Buffer>,
 
-    // ── batches ───────────────────────────────────────────────────────────────
+    // ── batches
     pub batches: Vec<Batch>,
 
-    // ── tilemap ───────────────────────────────────────────────────────────────
+    // ── tilemap
     pub tilemaps: Vec<rendering::TilemapRenderer>,
 
-    // ── asset store ────────────────────────────────────────────────────────────
+    // ── asset store
     asset_store: Option<Arc<OnceLock<AssetStore>>>,
 
-    // ── window ─────────────────────────────────────────────────────────────────
+    // ── window
     pub size: winit::dpi::PhysicalSize<u32>,
+
+    // MSAA
+    msaa_texture: Option<wgpu::TextureView>,
+    sample_count: u32,
 }
 
 impl Renderer {
@@ -88,7 +91,6 @@ impl Renderer {
             device: None,
             queue: None,
             config: None,
-            pipeline: None,
             bind_group_layout: None,
             vertex_buffer: None,
             index_buffer: None,
@@ -99,8 +101,12 @@ impl Renderer {
             tilemaps: Vec::new(),
             batches: Vec::new(),
             size: winit::dpi::PhysicalSize::new(240, 120),
+            msaa_texture: None,
+            sample_count: 4,
         }
     }
+    
+    
     fn build_pipeline(&self, config: &PipelineConfig) -> wgpu::RenderPipeline {
         let shader = self
             .device()
@@ -151,7 +157,7 @@ impl Renderer {
         self.pipelines.insert(key, pipeline);
     }
 
-    // ── Public API ────────────────────────────────────────────────────────────
+    // ── Public API
 
     pub async fn init_window(&mut self, window: Arc<Window>) {
         self.size = window.inner_size();
@@ -177,6 +183,8 @@ impl Renderer {
         self.camera.viewport_width = width;
         self.camera.viewport_height = height;
         self.update_camera();
+        
+        self.msaa_texture = Some(self.create_msaa_texture());
     }
 
     pub fn update_camera(&self) {
@@ -259,6 +267,26 @@ impl Renderer {
         self.batches.push(batch);
         self.batches.len() - 1
     }
+    fn create_msaa_texture(&self) -> wgpu::TextureView {
+        let config = self.config.as_ref().unwrap();
+        self.device().create_texture(&wgpu::TextureDescriptor {
+            label: Some("MSAA Texture"),
+            size: wgpu::Extent3d {
+                width: config.width,
+                height: config.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: self.sample_count,
+            dimension: wgpu::TextureDimension::D2,
+            format: config.format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        })
+        .create_view(&wgpu::TextureViewDescriptor::default())
+    }
+     
+
     /// KILLL at index and replace with new batch.
     pub fn replace_batch(
         &mut self,
@@ -417,12 +445,12 @@ impl Renderer {
             .configure(self.device(), &config);
         self.config = Some(config);
 
-        let shader = self
-            .device()
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
-            });
+        // let shader = self
+        //     .device()
+        //     .create_shader_module(wgpu::ShaderModuleDescriptor {
+        //         label: Some("Shader"),
+        //         source: wgpu::ShaderSource::Wgsl(include_str!("shaders/sprite.wgsl").into()),
+        //     });
 
         let bind_group_layout =
             self.device()
@@ -469,55 +497,29 @@ impl Renderer {
                     immediate_size: 0,
                 });
 
-        self.pipeline = Some(self.device().create_render_pipeline(
-            &wgpu::RenderPipelineDescriptor {
-                label: Some("Quad Pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[Vertex::layout(), Instance::layout()],
-                    compilation_options: Default::default(),
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-
-                    // Hopefully allows for alpha blending
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::COLOR,
-                    })],
-                    compilation_options: Default::default(),
-                }),
-                primitive: wgpu::PrimitiveState::default(),
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            },
-        ));
 
         self.bind_group_layout = Some(bind_group_layout);
-
+        self.register_pipeline_keys();
+        
+    }
+    fn register_pipeline_keys(&mut self) {
         // Register built-ins
         self.register_pipeline(
             PipelineKey::Default,
             PipelineConfig {
-                shader_source: include_str!("shaders/shader.wgsl"),
+                shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
         self.register_pipeline(
             PipelineKey::Additive,
             PipelineConfig {
-                shader_source: include_str!("shaders/shader.wgsl"), // same VS/FS, different blend
+                shader_source: include_str!("shaders/sprite.wgsl"), // same VS/FS, different blend
                 blend: wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING, // or custom additive
             },
         );
+        self.msaa_texture = Some(self.create_msaa_texture());
     }
-
     fn init_camera(&mut self) {
         let config = self.config.as_ref().unwrap();
         self.camera.viewport_width = config.width;
@@ -641,24 +643,23 @@ impl Renderer {
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Main Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                    store: wgpu::StoreOp::Store,
-                },
-                depth_slice: None,
-            })],
+                            view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                            depth_slice: None,
+                        })],
             ..Default::default()
         });
-
         // Draw all tilemaps before sprites
         for tilemap in &self.tilemaps {
             tilemap.record(&mut rpass);
         }
 
         // Sprites on top
-        rpass.set_pipeline(self.pipeline.as_ref().unwrap());
+        //rpass.set_pipeline(self.pipeline.as_ref().unwrap());
         rpass.set_vertex_buffer(0, self.vertex_buffer.as_ref().unwrap().slice(..));
         rpass.set_index_buffer(
             self.index_buffer.as_ref().unwrap().slice(..),
@@ -689,3 +690,37 @@ impl Renderer {
         self.queue.as_ref().unwrap()
     }
 }
+
+// self.pipeline = Some(self.device().create_render_pipeline(
+//     &wgpu::RenderPipelineDescriptor {
+//         label: Some("Quad Pipeline"),
+//         layout: Some(&pipeline_layout),
+//         vertex: wgpu::VertexState {
+//             module: &shader,
+//             entry_point: Some("vs_main"),
+//             buffers: &[Vertex::layout(), Instance::layout()],
+//             compilation_options: Default::default(),
+//         },
+//         fragment: Some(wgpu::FragmentState {
+//             module: &shader,
+//             entry_point: Some("fs_main"),
+
+//             // Hopefully allows for alpha blending
+//             targets: &[Some(wgpu::ColorTargetState {
+//                 format,
+//                 blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+//                 write_mask: wgpu::ColorWrites::COLOR,
+//             })],
+//             compilation_options: Default::default(),
+//         }),
+//         primitive: wgpu::PrimitiveState::default(),
+//         depth_stencil: None,
+//         multisample: wgpu::MultisampleState {
+//             count: 4, 
+//             mask: !0, 
+//             alpha_to_coverage_enabled: false,
+//         },
+//         multiview_mask: None,
+//         cache: None,
+//     },
+// ));

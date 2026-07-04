@@ -1,13 +1,9 @@
-use crate::runtime::scene::world_serializer::WorldSerializer;
+use crate::runtime::scene::world_serializer;
 
-pub struct SceneManager {
-    pub world_serializer: WorldSerializer,
-}
+pub struct SceneManager {}
 
 impl SceneManager {
     pub fn new() -> Self {
-        Self {
-            world_serializer: WorldSerializer::new(),
-        }
+        Self {}
     }
 }
