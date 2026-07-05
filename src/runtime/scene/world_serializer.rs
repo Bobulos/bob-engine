@@ -1,25 +1,18 @@
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
-use std::path::Path;
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use crate::runtime::ecs::DynamicWorld;
-use crate::runtime::rendering::sprite_rendering::components;
 use crate::runtime::scene::serialized_world::SerializedWorld;
 
-use crate::{
-    Component, StableTypeID,
-    runtime::ecs::{Entity, component_store::ComponentStore},
-};
 type ComponentID = u64;
+type SerializedWorldMap = HashMap<u64, HashMap<u64, serde_json::Value>>;
 // pub fn dump_entitys(world: &Arc<DynamicWorld>) {
 //     let lock = world.storages.read().unwrap();
 // }
 
-const SCENE_FILE_PATH: &'static str = "scenes/saved/";
-const SCENE_FILE_SUFFIX: &'static str = ".bscene";
+pub const SCENE_FILE_PATH: &'static str = "scenes/saved/";
+pub const SCENE_FILE_SUFFIX: &'static str = ".bscene";
 pub fn create_scene_file_from_world(name: String, world: &Arc<DynamicWorld>) {
     let _ = fs::create_dir_all(SCENE_FILE_PATH);
     let formatted = format!(
@@ -34,7 +27,7 @@ pub fn create_scene_file_from_world(name: String, world: &Arc<DynamicWorld>) {
 fn serialize_world(world: &Arc<DynamicWorld>) -> SerializedWorld {
     let entity_count = *world.entities_count.read().unwrap();
 
-    let mut component_defs: HashMap<u64, HashMap<u64, serde_json::Value>> = HashMap::new();
+    let mut component_defs: SerializedWorldMap = SerializedWorldMap::new();
     let lock = world.storages.read().unwrap();
 
     // todo!(

@@ -33,7 +33,7 @@ impl SpriteBatchAllocatorSystem {
     // Renderer interface --------------------------------------------
     /// Allocates a new atlas handle and returns its index.
     pub fn allocate_atlas(&mut self, asset_handle: &AssetHandle) -> usize {
-        println!("Allocating new atlas for: {}", asset_handle.0);
+        println!("Allocating new atlas for: {}", asset_handle.idx);
         self.atlas_handles
             .push(AtlasHandle(self.allocate_batch(asset_handle.clone())));
         self.asset_handles.push(asset_handle.clone());
@@ -74,7 +74,7 @@ impl SystemBase for SpriteBatchAllocatorSystem {
                 .iter()
                 .enumerate()
                 .find(|(idx, handle)| {
-                    handle.0 == sprite_asset_handle.0
+                    handle.idx == sprite_asset_handle.idx
                         && self.atlas_idxs[*idx] < MAX_SPRITES_PER_BATCH
                 })
                 .map(|(idx, _)| idx);

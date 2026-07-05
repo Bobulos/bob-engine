@@ -6,7 +6,6 @@ use crate::runtime::phys::collisions::{circle_circle, circle_rect, rect_rect};
 use crate::runtime::phys::physics_config::PhysicsConfig;
 pub use crate::runtime::phys::{Aabb, Manifold, RigidBody, Shape};
 use std::sync::Arc;
-use std::time::Instant;
 
 pub struct PhysicsSystem {
     pub config: PhysicsConfig,

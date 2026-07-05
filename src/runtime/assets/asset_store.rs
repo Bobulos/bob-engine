@@ -1,3 +1,6 @@
+use wgpu::naga::compact::KeepUnused::No;
+
+use crate::runtime::assets::asset_handle::AssetType;
 use crate::runtime::assets::{Asset, AssetEmbedded, AssetHandle};
 use std::{collections::HashMap, hash::Hasher};
 
@@ -26,7 +29,7 @@ impl AssetStore {
         }
     }
     pub fn get_asset_by_handle(&self, idx: AssetHandle) -> Option<&Asset> {
-        self.assets.get(idx.0)
+        self.assets.get(idx.idx)
     }
     pub fn get_asset_idx(&self, hash: u64) -> Option<AssetHandle> {
         self.asset_handles.get(&hash).copied()
@@ -41,7 +44,7 @@ impl AssetStore {
 
     pub fn get_asset_by_hash(&self, hash: u64) -> Option<&Asset> {
         let idx = self.asset_handles.get(&hash)?;
-        self.assets.get(idx.0)
+        self.assets.get(idx.idx)
     }
 
     pub fn get_asset_by_path(&self, path: &str) -> Option<&Asset> {
@@ -62,13 +65,8 @@ impl AssetStore {
 
         let asset_paths: Vec<String> =
             serde_json::from_slice(&raw_json_data).expect("Failed to parse asset_store.json");
-
-        println!("Assets included:");
-
-        for (idx, path) in asset_paths.iter().enumerate() {
-            println!("{}, Hash: {}, Idx: {}", path, generate_hash(&path), idx);
-            self.included_paths.push(path.clone());
-        }
+        self.included_paths = asset_paths;
+        //println!("Assets included:");
     }
 
     fn generate_assets(&mut self) {
@@ -85,8 +83,11 @@ impl AssetStore {
             let index = self.assets.len();
 
             self.assets.push(asset);
-
-            self.asset_handles.insert(hash, AssetHandle(index));
+            
+            let handle = AssetHandle::new(index, get_asset_type_from_path(path.clone()));
+            self.asset_handles.insert(hash, handle);
+            println!("include asset: IDX:{}, HASH:{}, TYPE:{:?}, PATH:{}", handle.idx, hash, handle.file_type, path);
+            
             self.path_to_hash.insert(path.clone(), hash);
         }
     }
@@ -96,4 +97,24 @@ fn generate_hash(item: &str) -> u64 {
     let mut hasher = seahash::SeaHasher::new();
     hasher.write(item.as_bytes());
     hasher.finish()
+}
+
+fn get_asset_type_from_path(path: String) -> Option<AssetType> {
+    let extension = get_extension_string(&path);
+    let t = match extension {
+        Some("png") => Some(AssetType::Png),
+        Some("jpeg") => Some(AssetType::Jpeg),
+        Some("jpg") => Some(AssetType::Jpeg),
+        Some("bscene") => Some(AssetType::BScene),
+        Some("json") => Some(AssetType::Json),
+        None => None,
+        _ => None,
+    };
+    t
+}
+
+fn get_extension_string(filename: &String) -> Option<&str> {
+    filename
+        .rfind('.')
+        .map(|idx| &filename[idx + 1..])
 }

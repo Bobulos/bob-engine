@@ -489,7 +489,7 @@ impl Renderer {
                     ],
                 });
 
-        let pipeline_layout =
+        let _pipeline_layout =
             self.device()
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Pipeline Layout"),
