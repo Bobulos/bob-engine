@@ -47,7 +47,7 @@ impl SystemBase for TestSystem {
 
             const TEST_MASS: f32 = 0.01;
             const TEST_VEL: f32 = 50.0;
-            for _ in 0..2000 {
+            for _ in 0..10000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,

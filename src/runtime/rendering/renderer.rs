@@ -1,10 +1,11 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
-use crate::runtime::rendering::instance::Instance;
+use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
+use crate::runtime::rendering::instance::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
-
+use crate::runtime::rendering::VertexLayout;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -28,7 +29,8 @@ pub enum PipelineKey {
 
 pub struct Batch {
     pub pipeline_key: PipelineKey,
-    pub instances: Vec<instance>,
+    pub instances: Vec<u8>,
+    pub instance_stride: usize,
     instance_buffer: wgpu::Buffer,
     instance_capacity: usize, // track buffer size to know when to reallocate
     num_instances: u32,
@@ -42,6 +44,11 @@ pub struct PipelineConfig<'a> {
     // extend later: depth_stencil, primitive, etc.
 }
 // Renderer
+pub struct PipelineEntry {
+    pipeline: wgpu::RenderPipeline,
+    // stride used when this pipeline was built — for validation
+    instance_stride: usize,
+}
 
 pub struct Renderer {
     // wgpu core
@@ -54,6 +61,7 @@ pub struct Renderer {
 
     // pipeline
     bind_group_layout: Option<wgpu::BindGroupLayout>,
+    
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 
     // shared geometry
@@ -107,16 +115,15 @@ impl Renderer {
             sample_count: 4,
         }
     }
-    
-    
-    fn build_pipeline(&self, config: &PipelineConfig) -> wgpu::RenderPipeline {
+
+    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline {
         let shader = self
             .device()
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: None,
                 source: wgpu::ShaderSource::Wgsl(config.shader_source.into()),
             });
-
+    
         let layout = self
             .device()
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -124,7 +131,7 @@ impl Renderer {
                 bind_group_layouts: &[Some(self.bind_group_layout.as_ref().unwrap())],
                 immediate_size: 0,
             });
-
+    
         self.device()
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
@@ -132,7 +139,7 @@ impl Renderer {
                 vertex: wgpu::VertexState {
                     module: &shader,
                     entry_point: Some("vs_main"),
-                    buffers: &[Vertex::layout(), Instance::layout()],
+                    buffers: &[Vertex::layout(), instance_layout],
                     compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
@@ -147,18 +154,24 @@ impl Renderer {
                 }),
                 primitive: wgpu::PrimitiveState::default(),
                 depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
+                multisample: wgpu::MultisampleState {
+                    count: self.sample_count,
+                    mask: !0,
+                    alpha_to_coverage_enabled: false,
+                },
                 multiview_mask: None,
                 cache: None,
             })
     }
-
     /// Register a built-in or custom pipeline at any time.
-    pub fn register_pipeline(&mut self, key: PipelineKey, config: PipelineConfig) {
-        let pipeline = self.build_pipeline(&config);
+    pub fn register_pipeline<I: VertexLayout>(
+        &mut self,
+        key: PipelineKey,
+        config: PipelineConfig,
+    ) {
+        let pipeline = self.build_pipeline(&config, I::layout());
         self.pipelines.insert(key, pipeline);
     }
-
     // Public API
 
     pub async fn init_window(&mut self, window: Arc<Window>) {
@@ -231,13 +244,12 @@ impl Renderer {
     }
     /// Creates a new batch from an asset handle and an initial instance list.
     /// Returns the batch index for later access via `renderer.batches[idx]`.
-    pub fn create_batch(
+    pub fn create_batch<I: bytemuck::Pod + VertexLayout>(
         &mut self,
         asset_handle: AssetHandle,
-        instances: Vec<Instance>,
+        instances: &[I],
         pipeline_key: PipelineKey,
     ) -> usize {
-        // :(
         let tex_bytes = self
             .asset_store
             .as_ref()
@@ -249,26 +261,81 @@ impl Renderer {
             .data
             .as_ref()
             .unwrap();
+    
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
-
-        let instance_buffer = self.make_instance_buffer(&instances);
+    
+        let raw: Vec<u8> = bytemuck::cast_slice(instances).to_vec();
+        let stride = std::mem::size_of::<I>();
+    
+        let instance_buffer = self.make_instance_buffer_raw(&raw, instances.len());
         let bind_group = self.make_bind_group(&tex, &pipeline_key);
-
-        let capacity = (instances.len() * 2).max(1);
-        let batch = Batch {
+    
+        self.batches.push(Batch {
             pipeline_key,
-            num_instances: capacity as u32,
-            instance_capacity: instances.len(),
-            instances,
-            instance_buffer,
             bind_group,
+            instance_buffer,
+            instance_capacity: instances.len(),
+            num_instances: instances.len() as u32,
             _texture: tex,
-        };
-
-        self.batches.push(batch);
+            instances: raw,
+            instance_stride: stride,
+        });
         self.batches.len() - 1
     }
+   
+    fn make_instance_buffer_raw(&self, data: &[u8], count: usize) -> wgpu::Buffer {
+        let capacity = (count * 2).max(1);
+        let stride = if count > 0 { data.len() / count } else { 1 };
+        let buffer = self.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: (stride * capacity) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        if !data.is_empty() {
+            self.queue().write_buffer(&buffer, 0, data);
+        }
+        buffer
+    }
+    // pub fn create_batch(
+    //     &mut self,
+    //     asset_handle: AssetHandle,
+    //     instances: Vec<Instance>,
+    //     pipeline_key: PipelineKey,
+    // ) -> usize {
+    //     // :(
+    //     let tex_bytes = self
+    //         .asset_store
+    //         .as_ref()
+    //         .unwrap()
+    //         .get()
+    //         .unwrap()
+    //         .get_asset_by_handle(asset_handle)
+    //         .unwrap()
+    //         .data
+    //         .as_ref()
+    //         .unwrap();
+    //     let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
+    //         .expect("Failed to load batch texture");
+
+    //     let instance_buffer = self.make_instance_buffer(&instances);
+    //     let bind_group = self.make_bind_group(&tex, &pipeline_key);
+
+    //     let capacity = (instances.len() * 2).max(1);
+    //     let batch = Batch {
+    //         pipeline_key,
+    //         num_instances: capacity as u32,
+    //         instance_capacity: instances.len(),
+    //         instances,
+    //         instance_buffer,
+    //         bind_group,
+    //         _texture: tex,
+    //     };
+
+    //     self.batches.push(batch);
+    //     self.batches.len() - 1
+    // }
     fn create_msaa_texture(&self) -> wgpu::TextureView {
         let config = self.config.as_ref().unwrap();
         self.device().create_texture(&wgpu::TextureDescriptor {
@@ -290,30 +357,30 @@ impl Renderer {
      
 
     /// KILLL at index and replace with new batch.
-    pub fn replace_batch(
-        &mut self,
-        idx: usize,
-        tex_bytes: &[u8],
-        instances: Vec<Instance>,
-        pipeline_key: PipelineKey,
-    ) {
-        let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
-            .expect("Failed to load batch texture");
+    // pub fn replace_batch(
+    //     &mut self,
+    //     idx: usize,
+    //     tex_bytes: &[u8],
+    //     instances: Vec<Instance>,
+    //     pipeline_key: PipelineKey,
+    // ) {
+    //     let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
+    //         .expect("Failed to load batch texture");
 
-        let instance_buffer = self.make_instance_buffer(&instances);
-        let bind_group = self.make_bind_group(&tex, &pipeline_key);
+    //     let instance_buffer = self.make_instance_buffer(&instances);
+    //     let bind_group = self.make_bind_group(&tex, &pipeline_key);
 
-        let batch = Batch {
-            pipeline_key: pipeline_key,
-            num_instances: instances.len() as u32,
-            instance_capacity: instances.len(),
-            instances,
-            instance_buffer,
-            bind_group,
-            _texture: tex,
-        };
-        self.batches[idx] = batch;
-    }
+    //     let batch = Batch {
+    //         pipeline_key: pipeline_key,
+    //         num_instances: instances.len() as u32,
+    //         instance_capacity: instances.len(),
+    //         instances,
+    //         instance_buffer,
+    //         bind_group,
+    //         _texture: tex,
+    //     };
+    //     self.batches[idx] = batch;
+    // }
     /// Replaces the texture on an existing batch (e.g. swapping a sprite sheet).
     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
@@ -506,14 +573,14 @@ impl Renderer {
     }
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
-        self.register_pipeline(
+        self.register_pipeline::<SpriteInstance>(
             PipelineKey::Sprite,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
-        self.register_pipeline(
+        self.register_pipeline::<SpriteInstance>(
             PipelineKey::Additive,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
@@ -521,7 +588,7 @@ impl Renderer {
             },
         );
         // ui
-        self.register_pipeline(
+        self.register_pipeline::<GuiInstance>(
             PipelineKey::Gui, 
             PipelineConfig {
                 shader_source: include_str!("shaders/gui.wgsl"),
@@ -555,12 +622,12 @@ impl Renderer {
 
     // Batch helpers
 
-    fn make_instance_buffer(&self, instances: &[Instance]) -> wgpu::Buffer {
+    fn make_instance_buffer(&self, instances: &[SpriteInstance]) -> wgpu::Buffer {
         // Allocate 2x requested capacity so moderate growth avoids reallocation
         let capacity = (instances.len() * 2).max(1);
         let buffer = self.device().create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Buffer"),
-            size: (std::mem::size_of::<Instance>() * capacity) as u64,
+            size: (std::mem::size_of::<SpriteInstance>() * capacity) as u64,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -623,73 +690,59 @@ impl Renderer {
             if batch.instances.is_empty() {
                 continue;
             }
-
-            // Find the highest slot that isn't the sentinel [f32::MAX, f32::MAX]
-            let active_count = batch
-                .instances
-                .iter()
-                .rposition(|i| i.position[0] != f32::MAX)
-                .map(|pos| pos + 1)
-                .unwrap_or(0);
-
-            if active_count == 0 {
-                batch.num_instances = 0;
-                continue;
-            }
-
-            // Reallocate if needed
-            if active_count > batch.instance_capacity {
-                let new_capacity = active_count * 2;
+    
+            let count = batch.instances.len() / batch.instance_stride;
+    
+            if count > batch.instance_capacity {
+                let new_capacity = count * 2;
                 batch.instance_buffer =
-                    self.device
-                        .as_ref()
-                        .unwrap()
-                        .create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Instance Buffer (resized)"),
-                            size: (std::mem::size_of::<Instance>() * new_capacity) as u64,
-                            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-                            mapped_at_creation: false,
-                        });
+                    self.device.as_ref().unwrap().create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Instance Buffer (resized)"),
+                        size: (batch.instance_stride * new_capacity) as u64,
+                        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    });
                 batch.instance_capacity = new_capacity;
             }
-
-            // Only upload up to the last active slot — no need to send dead space
-            batch.num_instances = active_count as u32;
+    
+            batch.num_instances = count as u32;
             self.queue.as_ref().unwrap().write_buffer(
                 &batch.instance_buffer,
                 0,
-                bytemuck::cast_slice(&batch.instances[..active_count]),
+                &batch.instances,
             );
         }
     }
-    
     fn record_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+        let msaa_view = self.msaa_texture.as_ref().expect("MSAA texture not initialized");
+        
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Main Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view,
-                    resolve_target: None,
+                view: msaa_view,        // render into MSAA texture
+                resolve_target: Some(view), // resolve down to surface
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                    store: wgpu::StoreOp::Store,
+                    store: wgpu::StoreOp::Discard, // MSAA texture doesn't need storing
                 },
                 depth_slice: None,
             })],
             ..Default::default()
         });
-        // Draw all tilemaps before sprites
-        for tilemap in &self.tilemaps {
-            tilemap.record(&mut rpass);
-        }
+    
 
-        // Sprites on top
-        //rpass.set_pipeline(self.pipeline.as_ref().unwrap());
+        // Migrate legacy tilemap to new solution
+
+        // for tilemap in &self.tilemaps {
+        //     tilemap.record(&mut rpass);
+        // }
+    
         rpass.set_vertex_buffer(0, self.vertex_buffer.as_ref().unwrap().slice(..));
         rpass.set_index_buffer(
             self.index_buffer.as_ref().unwrap().slice(..),
             wgpu::IndexFormat::Uint16,
         );
-
+    
         for batch in &self.batches {
             if batch.num_instances == 0 {
                 continue;
@@ -704,6 +757,7 @@ impl Renderer {
             rpass.draw_indexed(0..self.num_indices, 0, 0..batch.num_instances);
         }
     }
+    
     // Convenience accessors
     fn device(&self) -> &wgpu::Device {
         self.device.as_ref().unwrap()

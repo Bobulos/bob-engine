@@ -3,7 +3,7 @@ use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::rendering::sprite_rendering::atlas_handle::AtlasHandle;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
-use crate::runtime::rendering::{Instance, Renderer};
+use crate::runtime::rendering::{SpriteInstance, Renderer};
 use crate::runtime::{self, rendering};
 use std::sync::{Arc, RwLock};
 
@@ -41,15 +41,13 @@ impl SpriteBatchAllocatorSystem {
         self.atlas_handles.len() - 1
     }
     fn allocate_batch(&self, asset_handle: AssetHandle) -> usize {
-        let new_batch_id = {
-            let mut renderer_lock = self.renderer.write().unwrap();
-            renderer_lock.create_batch(
-                asset_handle,
-                vec![Instance::default(); runtime::engine::SPRITE_BATCH_SIZE],
-                rendering::renderer::PipelineKey::Sprite,
-            )
-        };
-        return new_batch_id;
+        let mut renderer_lock = self.renderer.write().unwrap();
+        let instances = vec![SpriteInstance::default(); runtime::engine::SPRITE_BATCH_SIZE];
+        renderer_lock.create_batch(
+            asset_handle,
+            &instances,
+            rendering::renderer::PipelineKey::Sprite,
+        )
     }
 }
 

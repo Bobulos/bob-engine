@@ -1,7 +1,7 @@
 use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 use crate::runtime::rendering::Renderer;
-use crate::runtime::rendering::instance::Instance;
+use crate::runtime::rendering::instance::SpriteInstance;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, RwLock};
 
@@ -21,9 +21,10 @@ impl SystemBase for RenderSystem {
         let mut renderer_lock = self.renderer.write().unwrap();
         world.for_each2_mut::<Transform, Sprite>(
             |_entity: Entity, transform: &mut Transform, sprite: &Sprite| {
-                // Don't render unitialized sprites
                 if sprite.index != usize::MAX && sprite.visible {
-                    renderer_lock.batches[sprite.batch_index].instances[sprite.index] = Instance {
+                    let batch = &mut renderer_lock.batches[sprite.batch_index];
+                    let instances: &mut [SpriteInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
+                    instances[sprite.index] = SpriteInstance {
                         position: transform.position.into(),
                         size: [1.0, 1.0],
                         uv_offset: sprite.uv_offset,
