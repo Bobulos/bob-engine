@@ -1,4 +1,3 @@
-This project is a game framework that implements a data-driven Entity-Component-System ECS.
+bob-engine A high-performance game engine written in Rust, built around a custom Entity Component System (ECS) architecture. The engine is designed with data-oriented principles, deterministic behavior, and modular systems to provide a flexible foundation for games and real-time simulations.
 
-This program operates with Components(Data) and Systems
-Systems modify component data, which is stored in contiguous memory, which is very cache-friendly.
+Current features include a multithreaded ECS, 2D physics with joints and constraints, rendering through WGPU, asset management, and a modular runtime that allows new systems and components to be added with minimal overhead. The project emphasizes performance, clean architecture, and experimentation with modern engine design while remaining lightweight and easy to extend.
