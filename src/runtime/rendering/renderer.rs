@@ -4,30 +4,31 @@ use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::instance::Instance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-// ── PipelineKey ───────────────────────────────────────────────────────────────
 
 /// Identifies a compiled render pipeline. Add variants here for each new shader.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PipelineKey {
     /// Standard alpha-blended sprite shader.
-    Default,
-    /// Additive blending — good for particles, glows, fire.
+    Sprite,
+    /// Additive blending good for particles, glows, fire.
     Additive,
+    /// Screen space ui
+    Gui,
     /// Custom/user-registered pipeline identified by an arbitrary string.
     Custom(String),
 }
 
-// ── Batch
 
 pub struct Batch {
     pub pipeline_key: PipelineKey,
-    pub instances: Vec<Instance>,
+    pub instances: Vec<instance>,
     instance_buffer: wgpu::Buffer,
     instance_capacity: usize, // track buffer size to know when to reallocate
     num_instances: u32,
@@ -40,10 +41,10 @@ pub struct PipelineConfig<'a> {
     pub blend: wgpu::BlendState,
     // extend later: depth_stencil, primitive, etc.
 }
-// ── Renderer
+// Renderer
 
 pub struct Renderer {
-    // ── wgpu core
+    // wgpu core
     instance: wgpu::Instance,
     adapter: Option<wgpu::Adapter>,
     surface: Option<wgpu::Surface<'static>>,
@@ -51,29 +52,29 @@ pub struct Renderer {
     queue: Option<wgpu::Queue>,
     config: Option<wgpu::SurfaceConfiguration>,
 
-    // ── pipeline
+    // pipeline
     bind_group_layout: Option<wgpu::BindGroupLayout>,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 
-    // ── shared geometry
+    // shared geometry
     vertex_buffer: Option<wgpu::Buffer>,
     index_buffer: Option<wgpu::Buffer>,
     num_indices: u32,
 
-    // ── camera
+    // camera
     pub camera: Camera,
     camera_buffer: Option<wgpu::Buffer>,
-
-    // ── batches
+    gui_camera_buffer: Option<wgpu::Buffer>,
+    // batches
     pub batches: Vec<Batch>,
 
-    // ── tilemap
+    // tilemap
     pub tilemaps: Vec<rendering::TilemapRenderer>,
 
-    // ── asset store
+    // asset store
     asset_store: Option<Arc<OnceLock<AssetStore>>>,
 
-    // ── window
+    // window
     pub size: winit::dpi::PhysicalSize<u32>,
 
     // MSAA
@@ -84,6 +85,7 @@ pub struct Renderer {
 impl Renderer {
     pub fn new() -> Self {
         Self {
+            gui_camera_buffer: None,
             pipelines: HashMap::default(),
             instance: wgpu::Instance::default(),
             adapter: None,
@@ -157,7 +159,7 @@ impl Renderer {
         self.pipelines.insert(key, pipeline);
     }
 
-    // ── Public API
+    // Public API
 
     pub async fn init_window(&mut self, window: Arc<Window>) {
         self.size = window.inner_size();
@@ -251,7 +253,7 @@ impl Renderer {
             .expect("Failed to load batch texture");
 
         let instance_buffer = self.make_instance_buffer(&instances);
-        let bind_group = self.make_bind_group(&tex);
+        let bind_group = self.make_bind_group(&tex, &pipeline_key);
 
         let capacity = (instances.len() * 2).max(1);
         let batch = Batch {
@@ -299,7 +301,7 @@ impl Renderer {
             .expect("Failed to load batch texture");
 
         let instance_buffer = self.make_instance_buffer(&instances);
-        let bind_group = self.make_bind_group(&tex);
+        let bind_group = self.make_bind_group(&tex, &pipeline_key);
 
         let batch = Batch {
             pipeline_key: pipeline_key,
@@ -316,7 +318,7 @@ impl Renderer {
     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
-        let bind_group = self.make_bind_group(&tex);
+        let bind_group = self.make_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
 
         let batch = &mut self.batches[batch_idx];
         batch.bind_group = bind_group;
@@ -351,7 +353,7 @@ impl Renderer {
         output.present();
         Ok(())
     }
-    // ── Initialization helpers ────────────────────────────────────────────────
+    // Initialization helpers
     async fn init_surface_and_device(&mut self, window: Arc<Window>) {
         let surface = self
             .instance
@@ -505,7 +507,7 @@ impl Renderer {
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
         self.register_pipeline(
-            PipelineKey::Default,
+            PipelineKey::Sprite,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
@@ -514,8 +516,16 @@ impl Renderer {
         self.register_pipeline(
             PipelineKey::Additive,
             PipelineConfig {
-                shader_source: include_str!("shaders/sprite.wgsl"), // same VS/FS, different blend
-                blend: wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING, // or custom additive
+                shader_source: include_str!("shaders/sprite.wgsl"),
+                blend: wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
+            },
+        );
+        // ui
+        self.register_pipeline(
+            PipelineKey::Gui, 
+            PipelineConfig {
+                shader_source: include_str!("shaders/gui.wgsl"),
+                blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
         self.msaa_texture = Some(self.create_msaa_texture());
@@ -533,9 +543,17 @@ impl Renderer {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             },
         ));
+        let ui_matrix = Camera::build_screen_space_matrix(config.width, config.height);
+        self.gui_camera_buffer = Some(self.device().create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("UI Camera Buffer"),
+                contents: bytemuck::cast_slice(&ui_matrix),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            },
+        ));
     }
 
-    // ── Batch helpers ─────────────────────────────────────────────────────────
+    // Batch helpers
 
     fn make_instance_buffer(&self, instances: &[Instance]) -> wgpu::Buffer {
         // Allocate 2x requested capacity so moderate growth avoids reallocation
@@ -552,7 +570,12 @@ impl Renderer {
         buffer
     }
 
-    fn make_bind_group(&self, tex: &Texture) -> wgpu::BindGroup {
+    fn make_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
+        let camera_buf = match pipeline_key {
+            PipelineKey::Gui => self.gui_camera_buffer.as_ref().unwrap(),
+            _ => self.camera_buffer.as_ref().unwrap(),
+        };
+    
         self.device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Batch Bind Group"),
             layout: self.bind_group_layout.as_ref().unwrap(),
@@ -567,13 +590,13 @@ impl Renderer {
                 },
                 wgpu::BindGroupEntry {
                     binding: 2,
-                    resource: self.camera_buffer.as_ref().unwrap().as_entire_binding(),
+                    resource: camera_buf.as_entire_binding(),
                 },
             ],
         })
     }
 
-    // ── Per-frame helpers ─────────────────────────────────────────────────────
+    // Perframe helpers 
     pub fn update_tilemap(
         &mut self,
         idx: usize,
@@ -594,6 +617,7 @@ impl Renderer {
             tile_size,
         );
     }
+    
     fn upload_instances(&mut self) {
         for batch in &mut self.batches {
             if batch.instances.is_empty() {
@@ -638,19 +662,19 @@ impl Renderer {
             );
         }
     }
-
+    
     fn record_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Main Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                            view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                store: wgpu::StoreOp::Store,
-                            },
-                            depth_slice: None,
-                        })],
+                view,
+                    resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+                depth_slice: None,
+            })],
             ..Default::default()
         });
         // Draw all tilemaps before sprites
@@ -680,9 +704,7 @@ impl Renderer {
             rpass.draw_indexed(0..self.num_indices, 0, 0..batch.num_instances);
         }
     }
-
-    // ── Convenience accessors ─────────────────────────────────────────────────
-
+    // Convenience accessors
     fn device(&self) -> &wgpu::Device {
         self.device.as_ref().unwrap()
     }

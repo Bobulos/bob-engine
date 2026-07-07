@@ -11,7 +11,7 @@ type SerializedWorldMap = HashMap<u64, HashMap<u64, serde_json::Value>>;
 //     let lock = world.storages.read().unwrap();
 // }
 
-pub const SCENE_FILE_PATH: &'static str = "scenes/saved/";
+pub const SCENE_FILE_PATH: &'static str = "assets/scenes/saved/";
 pub const SCENE_FILE_SUFFIX: &'static str = ".bscene";
 pub fn create_scene_file_from_world(name: String, world: &Arc<DynamicWorld>) {
     let _ = fs::create_dir_all(SCENE_FILE_PATH);

@@ -46,7 +46,7 @@ impl SpriteBatchAllocatorSystem {
             renderer_lock.create_batch(
                 asset_handle,
                 vec![Instance::default(); runtime::engine::SPRITE_BATCH_SIZE],
-                rendering::renderer::PipelineKey::Default,
+                rendering::renderer::PipelineKey::Sprite,
             )
         };
         return new_batch_id;

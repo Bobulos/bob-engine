@@ -47,7 +47,7 @@ impl SystemBase for TestSystem {
 
             const TEST_MASS: f32 = 0.01;
             const TEST_VEL: f32 = 50.0;
-            for _ in 0..10 {
+            for _ in 0..2000 {
                 let e = world.create_entity();
                 let pos = Float2::new(
                     rand::random::<f32>() * 2000.0 - 1000.0,
@@ -78,7 +78,7 @@ impl SystemBase for TestSystem {
 
             const LENGTH: usize = 10;
 
-            for y in 0..100 {
+            for y in 0..1 {
                 let mut bodies: Vec<Entity> = Vec::new();
                 for _ in 0..LENGTH {
                     bodies.push(world.create_entity());

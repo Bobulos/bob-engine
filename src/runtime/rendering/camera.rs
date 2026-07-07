@@ -31,6 +31,16 @@ impl Camera {
             viewport_height: 1,
         }
     }
+    pub fn build_screen_space_matrix(width: u32, height: u32) -> [[f32; 4]; 4] {
+        let w = width as f32;
+        let h = height as f32;
+        [
+            [2.0 / w,  0.0,     0.0, 0.0],
+            [0.0,     -2.0 / h, 0.0, 0.0],
+            [0.0,      0.0,     1.0, 0.0],
+            [-1.0,     1.0,     0.0, 1.0],
+        ]
+    }
     // Produces an orthographic projection that preserves aspect ratio
     pub fn build_matrix(&self) -> [[f32; 4]; 4] {
         let aspect = self.viewport_width as f32 / self.viewport_height as f32;

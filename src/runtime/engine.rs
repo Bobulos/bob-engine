@@ -156,10 +156,10 @@ impl Engine {
         if input.get_key_down(winit::keyboard::PhysicalKey::Code(
             winit::keyboard::KeyCode::ArrowLeft,
         )) {
-            world_serializer::create_scene_file_from_world(
-                String::from_str("Bingus").unwrap(),
-                &(self.entities.get_world(MAIN_WORLD).unwrap()),
-            );
+            // world_serializer::create_scene_file_from_world(
+            //     String::from_str("Bingus").unwrap(),
+            //     &(self.entities.get_world(MAIN_WORLD).unwrap()),
+            // );
             self.renderer
                 .write()
                 .unwrap()
