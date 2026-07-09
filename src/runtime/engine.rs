@@ -288,7 +288,7 @@ impl Engine {
         );
         let _rendering_system = group.register_system(
             Box::new(
-                rendering::sprite_rendering::sprite_batch_allocator_system::SpriteBatchAllocatorSystem::new(
+                rendering::batch_allocator::BatchAllocator::new(
                     Arc::clone(&self.renderer)
                 ),
             ),

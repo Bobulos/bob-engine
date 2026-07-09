@@ -2,15 +2,15 @@ use crate::runtime::assets::AssetHandle;
 use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::rendering::sprite_rendering::atlas_handle::AtlasHandle;
-use crate::runtime::rendering::sprite_rendering::components::Sprite;
-use crate::runtime::rendering::{SpriteInstance, Renderer};
+use crate::runtime::rendering::{BatchHandle, Renderer};
+use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::{self, rendering};
 use std::sync::{Arc, RwLock};
 
-pub const MAX_SPRITES_PER_BATCH: usize = 0xfff;
+pub const MAX_PER_BATCH: usize = 0xfff;
 const UNASSIGNED: usize = usize::MAX;
 
-pub struct SpriteBatchAllocatorSystem {
+pub struct BatchAllocator {
     pub renderer: Arc<RwLock<Renderer>>,
 
     /// Maps inner value maps to renderer batches.
@@ -20,7 +20,7 @@ pub struct SpriteBatchAllocatorSystem {
     asset_handles: Vec<AssetHandle>,
 }
 
-impl SpriteBatchAllocatorSystem {
+impl BatchAllocator {
     pub fn new(renderer: Arc<RwLock<Renderer>>) -> Self {
         Self {
             renderer,
@@ -51,45 +51,45 @@ impl SpriteBatchAllocatorSystem {
     }
 }
 
-impl SystemBase for SpriteBatchAllocatorSystem {
+impl SystemBase for BatchAllocator {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         let mut pending: Vec<(Entity, AssetHandle)> = Vec::new();
-        world.for_each_mut::<Sprite>(|_entity, sprite| {
-            if sprite.index == UNASSIGNED {
+        world.for_each_mut::<BatchHandle>(|_entity, handle| {
+            if handle.index == UNASSIGNED {
                 pending.push((
                     _entity,
                     // Fix this jhon
-                    sprite.asset_handle,
+                    handle.asset_handle,
                 ));
             }
         });
 
-        for (entity, sprite_asset_handle) in pending {
+        for (entity, batch_handle_asset_handle) in pending {
             let matching_idx = self
                 .asset_handles
                 .iter()
                 .enumerate()
                 .find(|(idx, handle)| {
-                    handle.idx == sprite_asset_handle.idx
-                        && self.atlas_idxs[*idx] < MAX_SPRITES_PER_BATCH
+                    handle.idx == batch_handle_asset_handle.idx
+                        && self.atlas_idxs[*idx] < MAX_PER_BATCH
                 })
                 .map(|(idx, _)| idx);
 
             if let Some(mut matching_idx) = matching_idx {
-                if self.atlas_idxs[matching_idx] >= MAX_SPRITES_PER_BATCH {
-                    matching_idx = self.allocate_atlas(&sprite_asset_handle);
+                if self.atlas_idxs[matching_idx] >= MAX_PER_BATCH {
+                    matching_idx = self.allocate_atlas(&batch_handle_asset_handle);
                 }
                 // Handle batch overflow
                 // Assign more sprites to a different batch
-                world.get_component_mut(entity, |sprite: &mut Sprite| {
-                    sprite.batch_index = self.atlas_handles[matching_idx].0;
-                    sprite.index = self.atlas_idxs[matching_idx];
+                world.get_component_mut(entity, |handle: &mut BatchHandle| {
+                    handle.batch_index = self.atlas_handles[matching_idx].0;
+                    handle.index = self.atlas_idxs[matching_idx];
                 });
                 self.atlas_idxs[matching_idx] += 1;
             } else {
-                self.allocate_atlas(&sprite_asset_handle);
+                self.allocate_atlas(&batch_handle_asset_handle);
             }
         }
     }

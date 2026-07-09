@@ -2,7 +2,7 @@ use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
-use crate::runtime::rendering::instance::SpriteInstance;
+use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
 use crate::runtime::rendering::VertexLayout;
