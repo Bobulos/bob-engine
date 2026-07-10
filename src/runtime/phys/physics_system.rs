@@ -170,7 +170,7 @@ impl PhysicsSystem {
                         }
                     };
 
-                    let mut_pas = Instant::now();
+                    let _mut_pas = Instant::now();
                     if let Some((j, friction_impulse, ra, rb)) = calculation_data {
                         let normal_impulse = m.normal * j;
                         world.get_component_mut::<RigidBody, _>(m.body_a, |a| {
@@ -245,11 +245,11 @@ impl SystemBase for PhysicsSystem {
 
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
 
-        let start = Instant::now();
+        let _start = Instant::now();
         // let start = Instant::now();
         self.step(world);
 
-        println!("Physics step took {} ms", start.elapsed().as_millis())
+        //println!("Physics step took {} ms", start.elapsed().as_millis())
         // println!("Physics took {}", start.elapsed().as_millis());
     }
 

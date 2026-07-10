@@ -14,7 +14,7 @@ use winit::window::Window;
 
 
 /// Identifies a compiled render pipeline. Add variants here for each new shader.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize, PartialEq, Eq, Hash)]
 pub enum PipelineKey {
     /// Standard alpha-blended sprite shader.
     Sprite,
@@ -22,8 +22,13 @@ pub enum PipelineKey {
     Additive,
     /// Screen space ui
     Gui,
-    /// Custom/user-registered pipeline identified by an arbitrary string.
-    Custom(String),
+    // Custom/user-registered pipeline identified by an arbitrary string.
+    //Custom(String)
+}
+impl Default for PipelineKey {
+    fn default() -> Self {
+        Self::Sprite
+    }
 }
 
 
@@ -687,6 +692,8 @@ impl Renderer {
     
     fn upload_instances(&mut self) {
         for batch in &mut self.batches {
+            // println!("batch stride {} capacity {}", 
+            //     batch.instance_stride, batch.instance_capacity);
             if batch.instances.is_empty() {
                 continue;
             }

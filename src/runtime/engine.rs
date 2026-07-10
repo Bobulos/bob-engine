@@ -6,9 +6,7 @@ use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
 use crate::runtime::rendering;
 use crate::runtime::rendering::Renderer;
-use crate::runtime::scene::world_serializer;
 
-use std::str::FromStr;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 use std::time::Instant;
@@ -25,7 +23,7 @@ pub const MAIN_WORLD: &str = "main";
 pub const RENDER_GROUP: &str = "render_group";
 pub const PHYSICS_GROUP: &str = "physics_group";
 pub const PHYSICS_CONNECTION_GROUP: &str = "physics_connection_group";
-pub const SPRITE_BATCH_SIZE: usize = 1024 * 4; // 2^10
+pub const RENDER_BATCH_SIZE: usize = 1024 * 4; // 2^10
 pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 // pub const INCLUDE_ATLAS: &[&str] = &[
 //     "tree.png",
@@ -52,9 +50,9 @@ impl Engine {
             .write()
             .unwrap()
             .init(self.asset_store.clone());
-        self.setup_world();
-        self.setup_renderer();
-        self.setup_systems();
+        self.init_world();
+        self.init_renderer();
+        self.init_systems();
 
         self.entities
             .worlds
@@ -64,22 +62,22 @@ impl Engine {
         println!("Engine initialized");
     }
 
-    fn setup_world(&mut self) {
+    fn init_world(&mut self) {
         self.entities
             .add_world(MAIN_WORLD, Arc::new(DynamicWorld::new()));
         crate::runtime::ecs::system_bootstrap::bootstrap(&self);
     }
 
-    fn setup_renderer(&mut self) {
-        self.setup_sprites();
-        self.setup_tilemap();
+    fn init_renderer(&mut self) {
+        self.init_sprites();
+        self.init_tilemap();
     }
 
-    fn setup_sprites(&mut self) {
+    fn init_sprites(&mut self) {
         let _world = self.entities.get_world(MAIN_WORLD).unwrap();
     }
 
-    fn setup_tilemap(&mut self) {
+    fn init_tilemap(&mut self) {
         let tilemap = [0u8; 64 * 64];
         let file = AssetEmbedded::get("grass.png").unwrap();
         let bytes: &[u8] = &file.data;
@@ -114,12 +112,12 @@ impl Engine {
         renderer.tilemaps[trees].flush_position(queue);
     }
 
-    fn setup_systems(&mut self) {
+    fn init_systems(&mut self) {
         println!("Initializing system groups");
 
-        self.setup_rendering();
-        self.setup_test();
-        self.setup_physics();
+        self.init_rendering();
+        self.init_test();
+        self.init_physics();
         // initialize them jhons
         self.entities.start_system_groups();
     }
@@ -227,7 +225,7 @@ impl Engine {
     }
 
     // Setup bs
-    fn setup_physics(&mut self) {
+    fn init_physics(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
         self.entities.add_system_group(
             PHYSICS_CONNECTION_GROUP,
@@ -256,7 +254,7 @@ impl Engine {
             0,
         );
     }
-    fn setup_test(&mut self) {
+    fn init_test(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
         self.entities.add_system_group(
             "test_group",
@@ -270,7 +268,7 @@ impl Engine {
             0,
         );
     }
-    fn setup_rendering(&mut self) {
+    fn init_rendering(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
         self.entities.add_system_group(
             RENDER_GROUP,
@@ -278,15 +276,23 @@ impl Engine {
         );
         // Render system
         let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
-        let _rendering_system = group.register_system(
+        let _ = group.register_system(
             Box::new(
-                rendering::sprite_rendering::render_system::RenderSystem::new(Arc::clone(
+                rendering::gui_rendering::GuiRenderSystem::new(
+                    Arc::clone(&self.renderer)
+                ),
+            ),
+            i32::MIN + 1,
+        );
+        let _ = group.register_system(
+            Box::new(
+                rendering::sprite_rendering::sprite_render_system::SpriteRenderSystem::new(Arc::clone(
                     &self.renderer,
                 )),
             ),
             i32::MIN + 1,
         );
-        let _rendering_system = group.register_system(
+        let _ = group.register_system(
             Box::new(
                 rendering::batch_allocator::BatchAllocator::new(
                     Arc::clone(&self.renderer)

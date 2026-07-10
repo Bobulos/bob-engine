@@ -1,6 +1,6 @@
 use crate::runtime::ecs::core_components::Transform;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
-use crate::runtime::rendering::{Renderer, batch_handle};
+use crate::runtime::rendering::Renderer;
 use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::BatchHandle;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
@@ -8,15 +8,15 @@ use std::sync::{Arc, RwLock};
 
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
-pub struct RenderSystem {
+pub struct SpriteRenderSystem {
     renderer: Arc<RwLock<Renderer>>,
 }
-impl RenderSystem {
+impl SpriteRenderSystem {
     pub fn new(renderer: Arc<RwLock<Renderer>>) -> Self {
         Self { renderer: renderer }
     }
 }
-impl SystemBase for RenderSystem {
+impl SystemBase for SpriteRenderSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         let mut renderer_lock = self.renderer.write().unwrap();

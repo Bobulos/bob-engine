@@ -6,7 +6,10 @@ use crate::runtime::ecs::{DynamicWorld, SystemBase};
 use crate::runtime::math::{self, Float2};
 use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::rendering::BatchHandle;
-use crate::runtime::rendering::batch_handle;
+use crate::runtime::rendering::Color;
+use crate::runtime::rendering::gui_rendering::GuiShape;
+use crate::runtime::rendering::gui_rendering::components::gui_transform::GuiTransform;
+use crate::runtime::rendering::renderer::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, OnceLock};
 // #[path = "../engine//ecs/component_store.rs"]
@@ -16,26 +19,27 @@ pub struct TestSystem {
     asset_store: Arc<OnceLock<AssetStore>>,
     ship_handle: Option<AssetHandle>,
     proj_handle: Option<AssetHandle>,
+    ui: Option<AssetHandle>,
 }
 impl TestSystem {
     pub fn new(asset_store: Arc<OnceLock<AssetStore>>) -> Self {
         Self {
             asset_store,
+            ui: None,
             ship_handle: None,
             proj_handle: None,
         }
     }
-}
-impl SystemBase for TestSystem {
-    fn on_start(&mut self, world: &Arc<DynamicWorld>) {
+    pub fn test_physics(&mut self, world: &Arc<DynamicWorld>) {
         if let Some(asset_store) = self.asset_store.get() {
-            self.ship_handle = asset_store.get_asset_idx_by_path("exp/ship_parts_s.png");
-            self.proj_handle = asset_store.get_asset_idx_by_path("exp/projectiles_m.png");
+            self.ship_handle = asset_store.get_asset_handle_by_path("exp/ship_parts_s.png");
+            self.proj_handle = asset_store.get_asset_handle_by_path("exp/projectiles_m.png");
+            self.ui = asset_store.get_asset_handle_by_path("default_ui/default_bck.png")
         }
 
         let targ = Float2::new(5.0, 0.0);
 
-        if let Some(sprite_handle) = self.ship_handle {
+        if let Some(_sprite_handle) = self.ship_handle {
             let ship_sprite =
                 Sprite::new(true, [0.0, 0.0], [1.0 / 6.0, 1.0]);
             let proj_sprite = Sprite::new(
@@ -43,8 +47,8 @@ impl SystemBase for TestSystem {
                 [0.5, 0.0],
                 [0.5, 1.0],
             );
-            let batch_ship_handle = BatchHandle::new(self.ship_handle.unwrap());
-            let batch_proj_handle = BatchHandle::new(self.proj_handle.unwrap());
+            let batch_ship_handle = BatchHandle::new(self.ship_handle.unwrap(), PipelineKey::Sprite);
+            let batch_proj_handle = BatchHandle::new(self.proj_handle.unwrap(), PipelineKey::Sprite);
 
             const TEST_MASS: f32 = 0.01;
             const TEST_VEL: f32 = 5.0;
@@ -136,20 +140,19 @@ impl SystemBase for TestSystem {
                     );
                 }
             }
-            // let t_e = world.create_entity();
-            // world.add_component_with_stable_type_id(t_e, 7897511584434135542);
-            // world.add_component(
-            //     t_e,
-            //     Sprite::new(
-            //         self.other_handle.unwrap(),
-            //         32,
-            //         32,
-            //         true,
-            //         [0.0, 0.0],
-            //         [0.5, 1.0],
-            //     ),
-            // );
         }
+    }
+    pub fn test_gui(&mut self, world: &Arc<DynamicWorld>) {
+        let entity = world.create_entity();
+        world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
+        world.add_component_safe(entity, GuiTransform::new(Float2::new(200.0, 200.0)));
+        world.add_component_safe(entity, GuiShape::new(true, [200.0, 200.0], Color::red(), Color::blue(), 20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
+    }
+}
+impl SystemBase for TestSystem {
+    fn on_start(&mut self, world: &Arc<DynamicWorld>) {
+        self.test_physics(world);
+        self.test_gui(world);
     }
     fn on_update(&mut self, _world: &Arc<DynamicWorld>) {}
 

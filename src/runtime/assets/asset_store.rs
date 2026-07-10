@@ -1,4 +1,3 @@
-use wgpu::naga::compact::KeepUnused::No;
 
 use crate::runtime::assets::asset_handle::AssetType;
 use crate::runtime::assets::{Asset, AssetEmbedded, AssetHandle};
@@ -34,7 +33,7 @@ impl AssetStore {
     pub fn get_asset_idx(&self, hash: u64) -> Option<AssetHandle> {
         self.asset_handles.get(&hash).copied()
     }
-    pub fn get_asset_idx_by_path(&self, path: &str) -> Option<AssetHandle> {
+    pub fn get_asset_handle_by_path(&self, path: &str) -> Option<AssetHandle> {
         let hash = self.path_to_hash.get(path)?;
         self.get_asset_idx(*hash)
     }

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use crate::runtime::{ecs::DynamicWorld, scene::serialized_world::SerializedWorld};
-use crate::runtime::scene::world_serializer;
 type SerializedWorldMap = HashMap<u64, HashMap<u64, serde_json::Value>>;
 
 

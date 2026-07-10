@@ -6,6 +6,7 @@ pub mod math;
 pub mod phys;
 pub mod rendering;
 pub mod scene;
+pub mod gui;
 
 pub use engine::Engine;
 pub use input::Input;

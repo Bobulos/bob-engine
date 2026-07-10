@@ -9,7 +9,10 @@ pub mod vertex_layout;
 pub mod gui_rendering;
 pub mod batch_allocator;
 pub mod batch_handle;
+pub mod color;
 
+
+pub use color::Color;
 pub use batch_handle::BatchHandle;
 pub use vertex_layout::VertexLayout;
 pub use renderer::Renderer;
