@@ -9,7 +9,6 @@ pub mod scene;
 pub mod gui;
 
 pub use engine::Engine;
-pub use input::Input;
 
 // #[path = "ecs/mod.rs"]
 // pub mod entities;

@@ -7,7 +7,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window, WindowAttributes};
 
-pub static WINDOW_SIZE: (u32, u32) = (1080, 720);
+pub static WINDOW_SIZE: (u32, u32) = (1920, 1080);
 pub static FULLSCREEN: bool = false;
 pub struct App {
     window: Option<Arc<Window>>,

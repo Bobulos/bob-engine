@@ -143,10 +143,28 @@ impl TestSystem {
         }
     }
     pub fn test_gui(&mut self, world: &Arc<DynamicWorld>) {
-        let entity = world.create_entity();
-        world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
-        world.add_component_safe(entity, GuiTransform::new(Float2::new(200.0, 200.0)));
-        world.add_component_safe(entity, GuiShape::new(true, [200.0, 200.0], Color::red(), Color::blue(), 20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
+        let size = crate::app::WINDOW_SIZE;
+        //1080 / 720
+        for x in 0..10 {
+            let entity = world.create_entity();
+            world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
+            world.add_component_safe(entity, GuiTransform::new(Float2::new(x as f32*200.0, 720.0-200.0)));
+            world.add_component_safe(entity, GuiShape::new(
+                true, 
+                [200.0, 200.0], 
+                Color::from_hex("#00909E").unwrap(), 
+                Color::from_hex("#006884").unwrap(), 
+                20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
+        }
+
+        // world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
+        // world.add_component_safe(entity, GuiTransform::new(Float2::new(0.0, 720.0-200.0)));
+        // world.add_component_safe(entity, GuiShape::new(
+        //     true, 
+        //     [200.0, 200.0], 
+        //     Color::from_hex("#00909E").unwrap(), 
+        //     Color::from_hex("#006884").unwrap(), 
+        //     20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
     }
 }
 impl SystemBase for TestSystem {

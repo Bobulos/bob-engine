@@ -98,6 +98,10 @@ impl DynamicWorld {
         }
     }
 
+    // Destroys this jhon
+    pub fn nuke_it() {
+        println!("BOOOM")
+    }
     //  Internal storage helpers
 
     fn storage_arc<

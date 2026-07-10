@@ -1,4 +1,4 @@
-use crate::runtime::Input;
+use crate::runtime::input::Input;
 use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
