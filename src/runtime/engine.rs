@@ -150,7 +150,9 @@ impl Engine {
     const CAMERA_SPEED: f32 = 0.1;
     pub fn player_loop(&mut self) {
         let input = self.input.read().unwrap();
-
+        if input.get_mouse_button_pressed(super::input::MouseButton::Left) {
+            println!("left mouse pressed");
+        }
         if input.get_key_down(KeyCode::KeyA) {
             // world_serializer::create_scene_file_from_world(
             //     String::from_str("Bingus").unwrap(),

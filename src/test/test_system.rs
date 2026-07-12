@@ -1,3 +1,4 @@
+use crate::app::WINDOW_SIZE;
 use crate::runtime::assets::AssetHandle;
 use crate::runtime::assets::AssetStore;
 use crate::runtime::ecs::Entity;
@@ -8,6 +9,7 @@ use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::rendering::BatchHandle;
 use crate::runtime::rendering::Color;
 use crate::runtime::rendering::gui_rendering::GuiShape;
+use crate::runtime::rendering::gui_rendering::components::gui_shape::Border;
 use crate::runtime::rendering::gui_rendering::components::gui_transform::GuiTransform;
 use crate::runtime::rendering::renderer::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
@@ -148,14 +150,15 @@ impl TestSystem {
         for x in 0..10 {
             let entity = world.create_entity();
             world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
-            world.add_component_safe(entity, GuiTransform::new(Float2::new(x as f32*200.0, 720.0-200.0)));
+            world.add_component_safe(entity, GuiTransform::new(Float2::new(x as f32*200.0, 1080.0-200.0)));
             world.add_component_safe(entity, GuiShape::new(
                 true, 
                 [200.0, 200.0], 
-                Color::from_hex("#00909E").unwrap(), 
-                Color::from_hex("#006884").unwrap(), 
-                20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
-        }
+                Color::from_hex("#00909E").unwrap(),
+                Border::Bordered(Color::from_hex("#006884").unwrap(), 20.0, 20.0),
+                //Border::Borderless,
+                [0.0, 0.0], [1.0, 1.0]));
+            }
 
         // world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
         // world.add_component_safe(entity, GuiTransform::new(Float2::new(0.0, 720.0-200.0)));

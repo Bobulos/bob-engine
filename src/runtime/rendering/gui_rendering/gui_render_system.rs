@@ -1,5 +1,7 @@
+use crate::runtime::rendering::Color;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 use crate::runtime::rendering::gui_rendering::GuiShape;
+use crate::runtime::rendering::gui_rendering::components::gui_shape::Border;
 use crate::runtime::rendering::gui_rendering::components::gui_transform::GuiTransform;
 use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
 use crate::runtime::rendering::Renderer;
@@ -16,24 +18,48 @@ impl GuiRenderSystem {
         Self { renderer: renderer }
     }
 }
+
+const MAX_CLEAN_PER_FRAME: usize = 8;
 impl SystemBase for GuiRenderSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         let mut renderer_lock = self.renderer.write().unwrap();
-        world.for_each3::<GuiTransform, GuiShape, BatchHandle>(
-            |_entity: Entity, transform: &GuiTransform, shape: &GuiShape, batch_handle: &BatchHandle| {
+
+        world.for_each3_mut::<GuiShape, GuiTransform, BatchHandle>(
+            |_entity, shape, transform, batch_handle| {
                 if batch_handle.index != usize::MAX && shape.visible {
+
+                    if !shape.dirty {
+                        return;
+                    }
+                    shape.dirty = false;
+
+                    
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
                     let instances: &mut [GuiInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
+
+
+                    let mut border_color: Color = Color::transparent(); 
+                    let mut border_width: f32 = 0.0;
+                    let mut border_radius: f32 = 0.0;
+                    match shape.border {
+                        Border::Bordered(color, width, radius) => {
+                            border_color = color;
+                            border_radius = radius;
+                            border_width = width;
+                        } 
+                        Border::Borderless => {}
+                    }
+                    
                     instances[batch_handle.index] = GuiInstance {
                         position: transform.position.into(),
                         size: shape.size,
                         uv_offset: shape.uv_offset,
                         uv_scale: shape.uv_scale,
                         color: shape.fill_color.value,
-                        corner_radius: shape.corner_radius,
-                        border_color: shape.border_color.value,
-                        border_width: shape.border_width,
+                        corner_radius: border_radius,
+                        border_color: border_color.value,
+                        border_width: border_width,
                         _pad: [0; 3],
                     };
                 }

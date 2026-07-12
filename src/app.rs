@@ -3,9 +3,12 @@ use crate::runtime::rendering;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalSize, Size};
+use winit::event::ElementState::Released;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
+use winit::keyboard::ModifiersKeyState::Pressed;
 use winit::window::{Fullscreen, Window, WindowAttributes};
+use winit::event::{ElementState, MouseButton};
 
 pub static WINDOW_SIZE: (u32, u32) = (1920, 1080);
 pub static FULLSCREEN: bool = false;
@@ -57,13 +60,30 @@ impl ApplicationHandler for App {
         event: WindowEvent,
     ) {
         match event {
+            WindowEvent::MouseInput { state, button, .. } => {
+                if let Some(engine) = &mut self.engine {
+                    match state {
+                        ElementState::Pressed => {
+                            engine.input.write().unwrap().receive_mouse_button_pressed(button);
+                        }
+                        ElementState::Released => {
+                            engine.input.write().unwrap().receive_mouse_button_released(button);
+                        }
+                    } 
+                }
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                if let Some(engine) = &mut self.engine {
+                    engine.input.write().unwrap().receive_mouse_moved(position);
+                }
+            }
             WindowEvent::KeyboardInput {
                 device_id: _,
                 event,
                 is_synthetic: _,
             } => {
                 if let Some(engine) = &mut self.engine {
-                    engine.input.write().unwrap().receive_input_from_app(event);
+                    engine.input.write().unwrap().receive_key_input_from_app(event);
                 }
             }
             WindowEvent::Resized(physical_size) => {
