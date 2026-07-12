@@ -1,4 +1,4 @@
-use crate::runtime::input::Input;
+use crate::runtime::input::{Input, KeyCode};
 use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
@@ -151,9 +151,7 @@ impl Engine {
     pub fn player_loop(&mut self) {
         let input = self.input.read().unwrap();
 
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::ArrowLeft,
-        )) {
+        if input.get_key_down(KeyCode::KeyA) {
             // world_serializer::create_scene_file_from_world(
             //     String::from_str("Bingus").unwrap(),
             //     &(self.entities.get_world(MAIN_WORLD).unwrap()),
@@ -164,42 +162,32 @@ impl Engine {
                 .camera
                 .move_by(-Self::CAMERA_SPEED, 0.0);
         }
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::ArrowRight,
-        )) {
+        if input.get_key_down(KeyCode::KeyD) {
             self.renderer
                 .write()
                 .unwrap()
                 .camera
                 .move_by(Self::CAMERA_SPEED, 0.0);
         }
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::ArrowUp,
-        )) {
+        if input.get_key_down(KeyCode::KeyW) {
             self.renderer
                 .write()
                 .unwrap()
                 .camera
                 .move_by(0.0, Self::CAMERA_SPEED);
         }
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::ArrowDown,
-        )) {
+        if input.get_key_down(KeyCode::KeyS) {
             self.renderer
                 .write()
                 .unwrap()
                 .camera
                 .move_by(0.0, -Self::CAMERA_SPEED);
         }
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::Digit1,
-        )) {
+        if input.get_key_down(KeyCode::Digit1) {
             self.renderer.write().unwrap().camera.zoom_by(1.01);
             self.renderer.write().unwrap().update_camera();
         }
-        if input.get_key_down(winit::keyboard::PhysicalKey::Code(
-            winit::keyboard::KeyCode::Digit2,
-        )) {
+        if input.get_key_down(KeyCode::Digit2) {
             self.renderer.write().unwrap().camera.zoom_by(0.99);
             self.renderer.write().unwrap().update_camera();
         }
