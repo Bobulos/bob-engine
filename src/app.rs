@@ -10,7 +10,7 @@ use winit::keyboard::ModifiersKeyState::Pressed;
 use winit::window::{Fullscreen, Window, WindowAttributes};
 use winit::event::{ElementState, MouseButton};
 
-pub static WINDOW_SIZE: (u32, u32) = (1920, 1080);
+pub static WINDOW_SIZE: (u32, u32) = (960, 540);
 pub static FULLSCREEN: bool = false;
 pub struct App {
     window: Option<Arc<Window>>,
@@ -30,7 +30,7 @@ impl ApplicationHandler for App {
         if self.window.is_none() {
             // Create window attributes required
             let mut attributes = WindowAttributes::default();
-            attributes.title = "Bob Engine".to_string();
+            attributes.title = "bob_engine".to_string();
             attributes.inner_size = Some(Size::new(Size::Physical(PhysicalSize::new(
                 WINDOW_SIZE.0,
                 WINDOW_SIZE.1,

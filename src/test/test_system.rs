@@ -8,9 +8,7 @@ use crate::runtime::math::{self, Float2};
 use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::rendering::BatchHandle;
 use crate::runtime::rendering::Color;
-use crate::runtime::rendering::gui_rendering::GuiShape;
-use crate::runtime::rendering::gui_rendering::components::gui_shape::Border;
-use crate::runtime::rendering::gui_rendering::components::gui_transform::GuiTransform;
+use crate::runtime::gui::components::{GuiBorder, GuiShape, GuiTransform, GuiAnchor};
 use crate::runtime::rendering::renderer::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use std::sync::{Arc, OnceLock};
@@ -97,12 +95,10 @@ impl TestSystem {
                     let mut cxn_a: Option<PhysCxn> = None;
                     let mut cxn_b: Option<PhysCxn> = None;
 
-                    // Link to the PREVIOUS entity: The anchor should be on our LEFT side (-0.5)
                     if x > 0 {
                         cxn_a = Some(PhysCxn::new(bodies[x - 1], Float2::new(-1.0, 0.0)));
                     }
 
-                    // Link to the NEXT entity: The anchor should be on our RIGHT side (0.5)
                     if x < LENGTH - 1 {
                         cxn_b = Some(PhysCxn::new(bodies[x + 1], Float2::new(1.0, 0.0)));
                     }
@@ -146,20 +142,34 @@ impl TestSystem {
     }
     pub fn test_gui(&mut self, world: &Arc<DynamicWorld>) {
         let size = crate::app::WINDOW_SIZE;
-        //1080 / 720
-        for x in 0..10 {
+
+        let ancs = [
+            GuiAnchor::BottomLeft, 
+            GuiAnchor::BottomRight, 
+            GuiAnchor::TopLeft, 
+            GuiAnchor::TopRight, 
+            GuiAnchor::BottomMiddle, 
+            GuiAnchor::TopMiddle, 
+            GuiAnchor::Middle, 
+            GuiAnchor::MiddleRight, 
+            GuiAnchor::MiddleLeft
+        ];
+        for anc in ancs {
             let entity = world.create_entity();
             world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
-            world.add_component_safe(entity, GuiTransform::new(Float2::new(x as f32*200.0, 1080.0-200.0)));
+            world.add_component_safe(entity, GuiTransform::at_anchor(
+                anc,
+                Float2::new(100.0, 100.0)
+            ));
             world.add_component_safe(entity, GuiShape::new(
                 true, 
-                [200.0, 200.0], 
                 Color::from_hex("#00909E").unwrap(),
-                Border::Bordered(Color::from_hex("#006884").unwrap(), 20.0, 20.0),
+                GuiBorder::Bordered(Color::from_hex("#006884").unwrap(), 20.0, 20.0),
+                [0.0, 0.0],
+                [1.0, 1.0],
                 //Border::Borderless,
-                [0.0, 0.0], [1.0, 1.0]));
-            }
-
+            ));
+        }
         // world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
         // world.add_component_safe(entity, GuiTransform::new(Float2::new(0.0, 720.0-200.0)));
         // world.add_component_safe(entity, GuiShape::new(

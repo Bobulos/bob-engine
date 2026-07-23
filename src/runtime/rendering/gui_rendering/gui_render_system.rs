@@ -1,9 +1,9 @@
+use crate::runtime::math::Float2;
 use crate::runtime::rendering::Color;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
-use crate::runtime::rendering::gui_rendering::GuiShape;
-use crate::runtime::rendering::gui_rendering::components::gui_shape::Border;
-use crate::runtime::rendering::gui_rendering::components::gui_transform::GuiTransform;
+use crate::runtime::gui::components::{gui_shape::GuiShape, gui_transform::GuiTransform};
 use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
+use crate::runtime::gui::components::GuiBorder;
 use crate::runtime::rendering::Renderer;
 use crate::runtime::rendering::BatchHandle;
 use std::sync::{Arc, RwLock};
@@ -33,27 +33,26 @@ impl SystemBase for GuiRenderSystem {
                         return;
                     }
                     shape.dirty = false;
-
                     
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
                     let instances: &mut [GuiInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
-
 
                     let mut border_color: Color = Color::transparent(); 
                     let mut border_width: f32 = 0.0;
                     let mut border_radius: f32 = 0.0;
                     match shape.border {
-                        Border::Bordered(color, width, radius) => {
+                        GuiBorder::Bordered(color, width, radius) => {
                             border_color = color;
                             border_radius = radius;
                             border_width = width;
                         } 
-                        Border::Borderless => {}
+                        GuiBorder::Borderless => {}
                     }
-                    
+                    let position = transform.position;                    
+                    //let position = transform.position;
                     instances[batch_handle.index] = GuiInstance {
-                        position: transform.position.into(),
-                        size: shape.size,
+                        position: position.into(),
+                        size: transform.size.into(),
                         uv_offset: shape.uv_offset,
                         uv_scale: shape.uv_scale,
                         color: shape.fill_color.value,

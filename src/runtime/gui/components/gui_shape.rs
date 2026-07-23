@@ -3,7 +3,7 @@ use serde;
 use crate::{Component, runtime::rendering::Color};
 
 #[derive(Debug, Clone, Copy, Default, serde::Deserialize, serde::Serialize)]
-pub enum Border {
+pub enum GuiBorder {
     #[default]
     Borderless,
     /// Color Width Radius
@@ -18,10 +18,9 @@ pub enum Border {
 pub struct GuiShape {
     pub visible: bool,
     pub dirty: bool,
-    pub size: [f32; 2],
     pub fill_color: Color,
 
-    pub border: Border,
+    pub border: GuiBorder,
     // pub border_color: Color,
     // pub border_width: f32,
     // pub corner_radius: f32,
@@ -33,9 +32,8 @@ pub struct GuiShape {
 impl GuiShape {
     pub fn new(
         visible: bool,
-        size: [f32; 2],
         fill_color: Color,
-        border: Border,
+        border: GuiBorder,
         // border_color: Color,
         // border_width: f32,
         // corner_radius: f32,
@@ -47,7 +45,6 @@ impl GuiShape {
             uv_offset,
             uv_scale,
             border,
-            size,
             fill_color,
             dirty: true,
             // border_color,
