@@ -11,20 +11,26 @@ use crate::runtime::rendering::Color;
 use crate::runtime::gui::components::{GuiBorder, GuiShape, GuiTransform, GuiAnchor};
 use crate::runtime::rendering::renderer::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
+use crate::runtime::input::Input;
+use std::io::SeekFrom::Start;
+use std::sync::RwLock;
 use std::sync::{Arc, OnceLock};
+use std::time::Instant;
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
 
 pub struct TestSystem {
+    input: Arc<RwLock<Input>>,
     asset_store: Arc<OnceLock<AssetStore>>,
     ship_handle: Option<AssetHandle>,
     proj_handle: Option<AssetHandle>,
     ui: Option<AssetHandle>,
 }
 impl TestSystem {
-    pub fn new(asset_store: Arc<OnceLock<AssetStore>>) -> Self {
+    pub fn new(asset_store: Arc<OnceLock<AssetStore>>, input: Arc<RwLock<Input>>) -> Self {
         Self {
             asset_store,
+            input,
             ui: None,
             ship_handle: None,
             proj_handle: None,
@@ -179,13 +185,41 @@ impl TestSystem {
         //     Color::from_hex("#006884").unwrap(), 
         //     20.0, 20.0, [0.0, 0.0], [1.0, 1.0]));
     }
+    pub fn run_projectiles(&mut self, world: &Arc<DynamicWorld>) {
+        world.for_each2_mut::<Transform, Projectile>(|_entity, transform, proj| {
+            transform.position += proj.dir*0.8;
+        });
+    }
+    pub fn spawn_projectiles(&mut self, world: &Arc<DynamicWorld>) {
+        let targ = Float2::ZERO;
+        for _ in 0..1000 {
+            let pos = crate::runtime::math::rng::random_float2(Float2::new(-1000.0, -1000.0), Float2::new(1000.0, 1000.0));
+
+            let dir = (targ - pos).normalize();
+            
+            let entity = world.create_entity();
+
+            world.add_component_safe(entity, Sprite::new(true, [0.0, 0.0], [0.5, 1.0]));
+            world.add_component_safe(entity, BatchHandle::new(self.proj_handle.unwrap(), PipelineKey::Sprite));
+            world.add_component_safe(entity, Transform::new(pos, math::angle::angle_to_point(pos, targ)+(std::f32::consts::PI/2.0)));
+            world.add_component_safe(entity, Projectile { dir });
+        }
+    }
 }
 impl SystemBase for TestSystem {
     fn on_start(&mut self, world: &Arc<DynamicWorld>) {
         self.test_physics(world);
+        //self.spawn_projectiles(world);
         self.test_gui(world);
     }
-    fn on_update(&mut self, _world: &Arc<DynamicWorld>) {}
+    fn on_update(&mut self, world: &Arc<DynamicWorld>) {
+        //self.run_projectiles(world);
+    }
 
     fn on_destroy(&mut self, _world: &Arc<DynamicWorld>) {}
+}
+//#[derive(crate::Component!)]
+#[derive(crate::Component!)]
+struct Projectile {
+    pub dir: Float2,
 }

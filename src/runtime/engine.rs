@@ -252,9 +252,10 @@ impl Engine {
         );
         let group = self.entities.get_system_group_mut("test_group").unwrap();
         group.register_system(
-            Box::new(crate::test::test_system::TestSystem::new(Arc::clone(
-                &self.asset_store,
-            ))),
+            Box::new(crate::test::test_system::TestSystem::new(
+                Arc::clone(&self.asset_store),
+                Arc::clone(&self.input),
+            )),
             0,
         );
     }

@@ -51,7 +51,6 @@ impl GuiTransform {
             anchor_screen_pos.x - adjusted_pos.x,
             anchor_screen_pos.y - adjusted_pos.y,
         );
-        println!("GUI transform created at {}", position);
         Self { position, size }
     }
 }
