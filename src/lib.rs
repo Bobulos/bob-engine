@@ -5,7 +5,7 @@ pub use stable_cmpt_id::StableID;
 pub use winit::event_loop::EventLoop;
 mod app;
 
-
+// now in partent
 // MARCOS
 //pub trait Cmpt: Clone + Default + Copy + serde::Serialize + serde::Deserialize<'static> {}
 pub trait StableTypeID {
