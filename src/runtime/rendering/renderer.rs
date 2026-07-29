@@ -192,6 +192,10 @@ impl Renderer {
     }
 
     pub fn resize(&mut self, width: u32, height: u32) {
+        // Janky late init hacks
+        // if self.config.is_none() || self.cam {
+        //     return;
+        // }
         let config = self.config.as_mut().unwrap();
         config.width = width.max(1);
         config.height = height.max(1);

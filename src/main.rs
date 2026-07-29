@@ -21,12 +21,20 @@
 // pub use stable_cmpt_id::StableID;
 // use winit::event_loop::EventLoop;
 // mod app;
+use bob_engine::{runtime::assets::AssetStore};
+use winit::event_loop::EventLoop;
+use bob_engine::app::App;
 use bob_engine::*;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("bob_engine running...");
     let event_loop = EventLoop::new()?;
     let mut app = App::default();
-    event_loop.run_app(&mut app)?;
+
+    let mut asset_store = AssetStore::new();
+    include_asset!(&mut asset_store, "../assets/Tux.png");
+    app.set_included_assets(asset_store);
+    event_loop.run_app(&mut app)?; 
     Ok(())
 }
 

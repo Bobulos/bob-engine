@@ -1,9 +1,10 @@
-mod runtime;
+pub mod runtime;
 pub mod test;
+pub mod app;
 pub use crate::app::App;
 pub use stable_cmpt_id::StableID;
 pub use winit::event_loop::EventLoop;
-mod app;
+
 
 // now in partent
 // MARCOS

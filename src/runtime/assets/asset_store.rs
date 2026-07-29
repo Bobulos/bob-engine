@@ -3,7 +3,7 @@ use crate::runtime::assets::asset_handle::AssetType;
 use crate::runtime::assets::{Asset, AssetEmbedded, AssetHandle};
 use std::{collections::HashMap, hash::Hasher};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AssetStore {
 
     /// Should get rid of these but for right 

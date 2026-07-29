@@ -1,20 +1,20 @@
 use crate::runtime::Engine;
+use crate::runtime::assets::AssetStore;
 use crate::runtime::rendering;
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
 use winit::dpi::{PhysicalSize, Size};
-use winit::event::ElementState::Released;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
-use winit::keyboard::ModifiersKeyState::Pressed;
 use winit::window::{Fullscreen, Window, WindowAttributes};
-use winit::event::{ElementState, MouseButton};
+use winit::event::ElementState;
 
 pub static WINDOW_SIZE: (u32, u32) = (960, 540);
 pub static FULLSCREEN: bool = false;
 pub struct App {
     window: Option<Arc<Window>>,
     engine: Option<Engine>,
+    included_assets: Option<AssetStore>,
 }
 
 impl Default for App {
@@ -22,7 +22,23 @@ impl Default for App {
         Self {
             window: None,
             engine: None,
+            included_assets: None,
         }
+    }
+}
+impl App {
+    pub fn set_included_assets(&mut self, asset_store: AssetStore) {
+        self.included_assets = Some(asset_store)
+    }
+    fn init_engine(&mut self) {
+        let mut renderer = rendering::Renderer::new();
+        pollster::block_on(renderer.init_window(Arc::clone(self.window.as_ref().expect("window not initialized when init_engine was called"))));
+
+        let mut engine = Engine::new(renderer);
+        engine.init(&mut self.included_assets.as_mut().unwrap()); // ThE big feller
+
+        self.engine = Some(engine);
+        println!("YO YO YO");
     }
 }
 impl ApplicationHandler for App {
@@ -40,16 +56,17 @@ impl ApplicationHandler for App {
                 attributes.fullscreen = Some(Fullscreen::Borderless(None));
             }
 
-            let window = Arc::new(event_loop.create_window(attributes).unwrap());
+            let window = event_loop.create_window(attributes).unwrap();
 
-            let mut renderer = rendering::Renderer::new();
-            pollster::block_on(renderer.init_window(Arc::clone(&window)));
+            // let mut renderer = rendering::Renderer::new();
+            // pollster::block_on(renderer.init_window(Arc::new(&window)));
 
-            let mut engine = Engine::new(renderer);
-            engine.init(); // Setup ECS, etc.
+            // let mut engine = Engine::new(renderer);
+            // engine.init(); // Setup ECS, etc.
 
-            self.window = Some(window);
-            self.engine = Some(engine);
+            self.window = Some(Arc::new(window));
+            //self.engine = Some(engine);
+            self.init_engine();
         }
     }
 

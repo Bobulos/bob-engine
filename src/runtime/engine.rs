@@ -1,5 +1,5 @@
 use crate::runtime::input::{Input, KeyCode};
-use crate::runtime::assets::{AssetEmbedded, AssetStore};
+use crate::runtime::assets::{AssetEmbedded, AssetStore, asset_store};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
@@ -41,12 +41,12 @@ impl Engine {
             asset_store: Arc::new(OnceLock::new()),
         }
     }
-
-    pub fn init(&mut self) {
-        let mut asset_store = AssetStore::new();
-        include_asset!(&mut asset_store, "../../assets/Tux.png");
+    /// Takes an asset store as an argument allows you to specify which assets to include
+    pub fn init(&mut self, asset_store: &mut AssetStore) {
+        // let mut asset_store = AssetStore::new();
+        //include_asset!(asset_store, "../../assets/Tux.png");
         asset_store.init();
-        self.asset_store.set(asset_store).expect("One lock sucks");
+        self.asset_store.set(asset_store.clone()).expect("One lock sucks");
         self.renderer
             .write()
             .unwrap()

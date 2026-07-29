@@ -12,6 +12,7 @@ use crate::runtime::gui::components::{GuiBorder, GuiShape, GuiTransform, GuiAnch
 use crate::runtime::rendering::renderer::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use crate::runtime::input::Input;
+use std::fs::FileType;
 use std::io::SeekFrom::Start;
 use std::sync::RwLock;
 use std::sync::{Arc, OnceLock};
@@ -54,6 +55,7 @@ impl TestSystem {
                 [1.0, 1.0],
             );
             let batch_ship_handle = BatchHandle::new(self.ship_handle.unwrap(), PipelineKey::Sprite);
+            //let batch_ship_handle = BatchHandle::new(AssetHandle { idx: 0, file_type: Scrate::runtime::assets::asset_handle::AssetType::Png }, PipelineKey::Sprite);            
             let batch_proj_handle = BatchHandle::new(self.proj_handle.unwrap(), PipelineKey::Sprite);
 
             const TEST_MASS: f32 = 0.01;
