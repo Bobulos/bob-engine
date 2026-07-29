@@ -2,6 +2,7 @@ pub mod asset;
 pub mod asset_embedded;
 pub mod asset_handle;
 pub mod asset_store;
+pub mod asset_include;
 
 pub use asset::Asset;
 pub use asset_embedded::AssetEmbedded;

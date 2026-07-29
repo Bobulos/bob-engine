@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use serde::Serialize;
-
 use crate::StableTypeID;
 use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;

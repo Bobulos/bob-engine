@@ -39,7 +39,7 @@ impl TestSystem {
     pub fn test_physics(&mut self, world: &Arc<DynamicWorld>) {
         if let Some(asset_store) = self.asset_store.get() {
             self.ship_handle = asset_store.get_asset_handle_by_path("exp/ship_parts_s.png");
-            self.proj_handle = asset_store.get_asset_handle_by_path("exp/projectiles_m.png");
+            self.proj_handle = asset_store.get_asset_handle_by_path("bob_engine_logo.png");
             self.ui = asset_store.get_asset_handle_by_path("default_ui/default_bck.png")
         }
 
@@ -50,8 +50,8 @@ impl TestSystem {
                 Sprite::new(true, [0.0, 0.0], [1.0 / 6.0, 1.0]);
             let proj_sprite = Sprite::new(
                 true,
-                [0.5, 0.0],
-                [0.5, 1.0],
+                [0.0, 0.0],
+                [1.0, 1.0],
             );
             let batch_ship_handle = BatchHandle::new(self.ship_handle.unwrap(), PipelineKey::Sprite);
             let batch_proj_handle = BatchHandle::new(self.proj_handle.unwrap(), PipelineKey::Sprite);
@@ -156,7 +156,7 @@ impl TestSystem {
             GuiAnchor::TopRight, 
             GuiAnchor::BottomMiddle, 
             GuiAnchor::TopMiddle, 
-            GuiAnchor::Middle, 
+            //GuiAnchor::Middle, 
             GuiAnchor::MiddleRight, 
             GuiAnchor::MiddleLeft
         ];
@@ -199,7 +199,7 @@ impl TestSystem {
             
             let entity = world.create_entity();
 
-            world.add_component_safe(entity, Sprite::new(true, [0.0, 0.0], [0.5, 1.0]));
+            world.add_component_safe(entity, Sprite::new(true, [0.0, 0.0], [1.0, 1.0]));
             world.add_component_safe(entity, BatchHandle::new(self.proj_handle.unwrap(), PipelineKey::Sprite));
             world.add_component_safe(entity, Transform::new(pos, math::angle::angle_to_point(pos, targ)+(std::f32::consts::PI/2.0)));
             world.add_component_safe(entity, Projectile { dir });

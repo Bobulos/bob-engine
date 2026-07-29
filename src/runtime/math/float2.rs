@@ -1,9 +1,9 @@
 use std::fmt;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 //  Float2
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 
 /// A 16-byte aligned pair of `f32` values backed by a 128-bit SIMD lane where
 /// available.  The public API is identical regardless of the backend chosen at
@@ -15,7 +15,7 @@ pub struct Float2 {
     pub y: f32,
 }
 
-// ── Constructors ─────────────────────────────────────────────────────────────
+//    Constructors                                                              
 
 impl Float2 {
     #[inline(always)]
@@ -36,7 +36,7 @@ impl Float2 {
     pub const NEG_INF: Self = Self::splat(f32::NEG_INFINITY);
 }
 
-// ── Core math ────────────────────────────────────────────────────────────────
+//    Core math                                                                 
 
 impl Float2 {
     /// Cross product with a scalar and a vector.
@@ -235,7 +235,7 @@ impl Float2 {
     }
 }
 
-// ── SIMD helpers (x86_64) ────────────────────────────────────────────────────
+//    SIMD helpers (x86_64)                                                     
 
 #[cfg(all(target_arch = "x86_64", target_feature = "sse4_1"))]
 #[inline]
@@ -269,7 +269,7 @@ unsafe fn normalize_fast_sse(v: Float2) -> Float2 {
     }
 }
 
-// ── SIMD helpers (AArch64 NEON) ──────────────────────────────────────────────
+//    SIMD helpers (AArch64 NEON)                                               
 
 #[cfg(all(target_arch = "aarch64", target_feature = "neon"))]
 #[inline]
@@ -301,7 +301,7 @@ unsafe fn normalize_fast_neon_f32(v: Float2) -> Float2 {
     Float2::new(out[0], out[1])
 }
 
-// ── Operator impls ────────────────────────────────────────────────────────────
+//    Operator impls                                                             
 
 macro_rules! impl_binop_f2 {
     ($trait:ident, $method:ident, $op:tt) => {
@@ -393,9 +393,9 @@ impl From<(f32, f32)> for Float2 {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 //  Int2
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 
 /// A 16-byte aligned pair of `i32` values backed by a 128-bit SIMD lane where
 /// available.
@@ -531,7 +531,7 @@ impl Int2 {
     }
 }
 
-// ── Operator impls ────────────────────────────────────────────────────────────
+//    Operator impls                                                             
 
 macro_rules! impl_binop_i2 {
     ($trait:ident, $method:ident, $op:tt, $checked:ident) => {
@@ -739,15 +739,15 @@ impl From<Float2> for Int2 {
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 //  Tests
-// ══════════════════════════════════════════════════════════════════════════════
+//  
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // ── Float2 ────────────────────────────────────────────────────────────────
+    //    Float2                                                                 
 
     #[test]
     fn float2_dot() {
@@ -839,7 +839,7 @@ mod tests {
         assert_eq!(v.ceil(), Float2::new(2.0, -2.0));
     }
 
-    // ── Int2 ─
+    //    Int2  
 
     #[test]
     fn int2_dot() {

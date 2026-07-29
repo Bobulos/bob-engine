@@ -5,6 +5,9 @@ use std::{collections::HashMap, hash::Hasher};
 
 #[derive(Debug)]
 pub struct AssetStore {
+
+    /// Should get rid of these but for right 
+    /// now it works for local storage
     pub included_paths: Vec<String>,
 
     // hash = asset idx
@@ -50,12 +53,30 @@ impl AssetStore {
         let hash = self.path_to_hash.get(path)?;
         self.get_asset_by_hash(*hash)
     }
-
+    /// should include all assets before calling this
     pub fn init(&mut self) {
         self.load_include_cfg();
         self.generate_assets();
     }
+ 
+    pub fn include_asset(&mut self, path: &'static str, data_raw: &[u8]) {
+        let hash = generate_hash(path);
 
+        let data = data_raw.to_vec();
+        
+        let path_as_string = String::from(path);
+        let asset = Asset::new(hash, path_as_string.clone(), Some(data));
+
+        let index = self.assets.len();
+
+        self.assets.push(asset);
+        
+        let handle = AssetHandle::new(index, get_asset_type_from_path(path_as_string.clone()));
+        self.asset_handles.insert(hash, handle);
+        println!("include asset: IDX:{}, HASH:{}, TYPE:{:?}, PATH:{}", handle.idx, hash, handle.file_type, path);
+        
+        self.path_to_hash.insert(path_as_string.clone(), hash);
+    }
     pub fn load_include_cfg(&mut self) {
         let raw_json_data = AssetEmbedded::get(ASSET_STORE_PATH)
             .expect("Couldn't load asset_store.json")
@@ -92,13 +113,13 @@ impl AssetStore {
     }
 }
 
-fn generate_hash(item: &str) -> u64 {
+pub fn generate_hash(item: &str) -> u64 {
     let mut hasher = seahash::SeaHasher::new();
     hasher.write(item.as_bytes());
     hasher.finish()
 }
 
-fn get_asset_type_from_path(path: String) -> Option<AssetType> {
+pub fn get_asset_type_from_path(path: String) -> Option<AssetType> {
     let extension = get_extension_string(&path);
     let t = match extension {
         Some("png") => Some(AssetType::Png),
@@ -112,7 +133,7 @@ fn get_asset_type_from_path(path: String) -> Option<AssetType> {
     t
 }
 
-fn get_extension_string(filename: &String) -> Option<&str> {
+pub fn get_extension_string(filename: &String) -> Option<&str> {
     filename
         .rfind('.')
         .map(|idx| &filename[idx + 1..])

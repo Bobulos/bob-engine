@@ -6,7 +6,7 @@ use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
 use crate::runtime::rendering;
 use crate::runtime::rendering::Renderer;
-
+use crate::include_asset;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::Duration;
 use std::time::Instant;
@@ -44,6 +44,7 @@ impl Engine {
 
     pub fn init(&mut self) {
         let mut asset_store = AssetStore::new();
+        include_asset!(&mut asset_store, "../../assets/Tux.png");
         asset_store.init();
         self.asset_store.set(asset_store).expect("One lock sucks");
         self.renderer
