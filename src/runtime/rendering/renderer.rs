@@ -121,7 +121,7 @@ impl Renderer {
         }
     }
 
-    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline {
+    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline { 
         let shader = self
             .device()
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -431,6 +431,7 @@ impl Renderer {
     }
     // Initialization helpers
     async fn init_surface_and_device(&mut self, window: Arc<Window>) {
+        println!("Init surface and device");
         let surface = self
             .instance
             .create_surface(window)
@@ -449,7 +450,6 @@ impl Renderer {
             .request_device(&wgpu::DeviceDescriptor::default())
             .await
             .expect("Failed to create device");
-
         self.surface = Some(surface);
         self.adapter = Some(adapter);
         self.device = Some(device);
@@ -771,6 +771,9 @@ impl Renderer {
     
     // Convenience accessors
     fn device(&self) -> &wgpu::Device {
+        // if let Some(device) = self.device.as_ref() {
+        //     return device;
+        // }
         self.device.as_ref().unwrap()
     }
     pub fn queue(&self) -> &wgpu::Queue {

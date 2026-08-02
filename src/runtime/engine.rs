@@ -1,10 +1,12 @@
+use winit::window;
+
 use crate::runtime::input::{Input, KeyCode};
 use crate::runtime::assets::{AssetEmbedded, AssetStore, asset_store};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
-use crate::runtime::rendering;
+use crate::runtime::rendering::{self, renderer};
 use crate::runtime::rendering::Renderer;
 use crate::include_asset;
 use std::sync::{Arc, OnceLock, RwLock};
@@ -32,19 +34,21 @@ pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 //     "exp/projectiles_m.png",
 // ];
 impl Engine {
-    pub fn new(renderer: Renderer) -> Self {
+    pub fn new() -> Self {
         Self {
             frame_count: 0,
-            renderer: Arc::new(RwLock::new(renderer)),
+            renderer: Arc::new(RwLock::new(Renderer::new())),
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
             asset_store: Arc::new(OnceLock::new()),
         }
     }
     /// Takes an asset store as an argument allows you to specify which assets to include
-    pub fn init(&mut self, asset_store: &mut AssetStore) {
+    pub fn init(&mut self, asset_store: &mut AssetStore, renderer: Renderer) {
         // let mut asset_store = AssetStore::new();
         //include_asset!(asset_store, "../../assets/Tux.png");
+        self.renderer = Arc::new(RwLock::new(renderer));
+
         asset_store.init();
         self.asset_store.set(asset_store.clone()).expect("One lock sucks");
         self.renderer
@@ -52,7 +56,9 @@ impl Engine {
             .unwrap()
             .init(self.asset_store.clone());
         self.init_world();
+        
         self.init_renderer();
+
         self.init_systems();
 
         self.entities
@@ -60,7 +66,6 @@ impl Engine {
             .get(MAIN_WORLD)
             .unwrap()
             .get_included_components();
-        println!("Engine initialized");
     }
 
     fn init_world(&mut self) {
@@ -114,7 +119,7 @@ impl Engine {
     }
 
     fn init_systems(&mut self) {
-        println!("Initializing system groups");
+        println!("Initializing system groups and components");
 
         self.init_rendering();
         self.init_test();
@@ -151,9 +156,6 @@ impl Engine {
     const CAMERA_SPEED: f32 = 0.1;
     pub fn player_loop(&mut self) {
         let input = self.input.read().unwrap();
-        if input.get_mouse_button_pressed(super::input::MouseButton::Left) {
-            println!("left mouse pressed");
-        }
         if input.get_key_down(KeyCode::KeyA) {
             // world_serializer::create_scene_file_from_world(
             //     String::from_str("Bingus").unwrap(),

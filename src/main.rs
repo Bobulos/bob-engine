@@ -3,6 +3,7 @@
 // use std::error::Error;
 // use std::path::Path;
 
+use bob_engine::runtime::Engine;
 // mod runtime;
 // pub mod test;
 // // #[path = "engine/ecs/component_store.rs"]
@@ -27,13 +28,11 @@ use bob_engine::app::App;
 use bob_engine::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("bob_engine running...");
     let event_loop = EventLoop::new()?;
-    let mut app = App::default();
-
     let mut asset_store = AssetStore::new();
     include_asset!(&mut asset_store, "../assets/Tux.png");
-    app.set_included_assets(asset_store);
+    let mut app = App::new(Engine::new(), asset_store);
+    
     event_loop.run_app(&mut app)?; 
     Ok(())
 }
