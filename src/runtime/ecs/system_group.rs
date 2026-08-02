@@ -17,12 +17,12 @@ pub struct SystemGroup {
 /// Multiple system groups can share a world
 /// Avoid haveing too many system group because each one takes a thread
 impl SystemGroup {
-    pub fn new(world: Arc<DynamicWorld>, threading: SystemGroupThreading) -> Self {
+    pub fn new(world: &Arc<DynamicWorld>, threading: SystemGroupThreading) -> Self {
         Self {
             threading: threading,
             system_update_order: [i32::MAX; MAX_SYSTEMS_PER_GROUP],
             systems: Arc::new(RwLock::new(Vec::new())),
-            world,
+            world: Arc::clone(world),
         }
     }
     pub fn update(&mut self) {

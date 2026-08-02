@@ -283,6 +283,7 @@ name = "bob_engine"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "component",
  "image",
  "macro_rules_attribute",
  "paste",
@@ -292,7 +293,6 @@ dependencies = [
  "seahash",
  "serde",
  "serde_json",
- "stable_cmpt_id",
  "wgpu",
  "winit",
 ]
@@ -427,6 +427,15 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "component"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "serde",
+ "syn",
 ]
 
 [[package]]
@@ -2434,14 +2443,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9571ea910ebd84c86af4b3ed27f9dbdc6ad06f17c5f96146b2b671e2976744f"
 dependencies = [
  "bitflags 2.11.0",
-]
-
-[[package]]
-name = "stable_cmpt_id"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]

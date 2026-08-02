@@ -33,10 +33,11 @@ impl Entities {
     pub fn add_world(&mut self, name: &'static str, world: Arc<DynamicWorld>) {
         self.worlds.insert(name, world);
     }
-    pub fn get_world(&self, name: &'static str) -> Result<Arc<DynamicWorld>, String> {
+    pub fn get_world(&self, name: &'static str) -> Result<&Arc<DynamicWorld>, String> {
         let w = self.worlds.get(name);
         if let Some(world) = w {
-            Ok(Arc::clone(world))
+            //Ok(Arc::clone(world))
+            Ok(world)
         } else {
             let joined = format!("Failed to find world nameof {}", name);
             Err(joined)

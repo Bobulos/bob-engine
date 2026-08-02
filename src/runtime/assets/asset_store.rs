@@ -58,7 +58,8 @@ impl AssetStore {
         self.load_include_cfg();
         self.generate_assets();
     }
- 
+
+    /// Modern can be used to manualy load
     pub fn include_asset(&mut self, path: &'static str, data_raw: &[u8]) {
         let hash = generate_hash(path);
 
@@ -77,6 +78,9 @@ impl AssetStore {
         
         self.path_to_hash.insert(path_as_string.clone(), hash);
     }
+    //
+    // Needs to go
+    // 
     pub fn load_include_cfg(&mut self) {
         let raw_json_data = AssetEmbedded::get(ASSET_STORE_PATH)
             .expect("Couldn't load asset_store.json")
@@ -89,6 +93,10 @@ impl AssetStore {
         //println!("Assets included:");
     }
 
+    //
+    // KILL THIS REPLACED BY INCLUDE ASSET
+    // 
+    
     fn generate_assets(&mut self) {
         for path in &self.included_paths {
             let hash = generate_hash(path);

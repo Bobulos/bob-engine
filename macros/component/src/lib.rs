@@ -1,6 +1,8 @@
 use proc_macro::TokenStream;
+use syn::parse_macro_input;
 use quote::quote;
-use syn::{DeriveInput, parse_macro_input};
+use syn::DeriveInput;
+
 #[proc_macro_derive(StableID)]
 pub fn derive_stable_type_id(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -29,4 +31,15 @@ pub fn derive_stable_type_id(input: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+
+#[proc_macro_attribute]
+pub fn component(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let item = parse_macro_input!(item as syn::DeriveInput);
+    quote! {
+        #[derive(Clone, Default, Copy, StableID, ::bob_engine::serde::Serialize, ::bob_engine::serde::Deserialize)]
+        #[serde(crate = "::bob_engine::serde")]
+        #item
+    }.into()
 }

@@ -15,15 +15,17 @@ use crate::runtime::assets::AssetStore;
 //     };
 // }
 
+
 #[macro_export]
-/// Takes an asset store and a path
 macro_rules! include_asset {
     ($a:expr, $p:expr) => {
         {
-            let _asset_store: &mut AssetStore = $a;
-            //let path:  = $p;
+            let asset_store: &mut AssetStore = $a;
             let _path: &str = $p;
-            $a.include_asset($p, include_bytes!($p));
+            asset_store.include_asset(
+                $p,
+                include_bytes!(concat!("../assets/", $p)),
+            );
         }
     };
 }

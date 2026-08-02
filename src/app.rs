@@ -13,7 +13,7 @@ pub static WINDOW_SIZE: (u32, u32) = (960, 540);
 pub static FULLSCREEN: bool = false;
 pub struct App {
     window: Option<Arc<Window>>,
-    engine: Option<Engine>,
+    pub engine: Option<Engine>,
     included_assets: Option<AssetStore>,
 }
 
