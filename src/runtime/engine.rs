@@ -35,13 +35,20 @@ pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 // ];
 impl Engine {
     pub fn new() -> Self {
-        Self {
+        let mut engine: Engine = Engine {
             frame_count: 0,
             renderer: Arc::new(RwLock::new(Renderer::new())),
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
             asset_store: Arc::new(OnceLock::new()),
-        }
+        };
+        // This is here to initialize the world so the user can add stuff too it
+        engine.init_world();
+
+        engine
+    }
+    pub fn init_ecs() {
+        
     }
     /// Takes an asset store as an argument allows you to specify which assets to include
     pub fn init(&mut self, asset_store: &mut AssetStore, renderer: Renderer) {
@@ -55,7 +62,6 @@ impl Engine {
             .write()
             .unwrap()
             .init(self.asset_store.clone());
-        self.init_world();
         
         self.init_renderer();
 
@@ -122,7 +128,7 @@ impl Engine {
         println!("Initializing system groups and components");
 
         self.init_rendering();
-        self.init_test();
+        //self.init_test();
         self.init_physics();
         // initialize them jhons
         self.entities.start_system_groups();
