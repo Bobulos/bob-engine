@@ -1,3 +1,6 @@
+use crate::Component;
+#[derive(Component!)]
+
 pub struct SpriteFrame {
     /// indexes into a sprite animation, stored inside a sytem SpriteSheetBinder
     pub frame: u16,

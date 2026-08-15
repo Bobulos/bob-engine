@@ -30,7 +30,8 @@ impl SpriteAnimation {
     }
     pub fn go_to_next_frame(&self, sprite: &mut Sprite, sprite_frame: &mut SpriteFrame) {
         let mut next_frame = sprite_frame.frame + 1;
-        if next_frame as usize > self.frame_abs.len() - 1 {
+        //println!("sprite frame {} {}", sprite_frame.frame, self.frame_abs.len());
+        if next_frame as usize >= self.frame_abs.len() {
             next_frame = 0;
         }
         sprite_frame.frame = next_frame;

@@ -21,8 +21,8 @@ impl SpriteSheetBinder {
     pub fn bind_animation(&mut self) {
         if let Some(ref mut animation) = self.animation {
             let mut bnd_frames = Vec::with_capacity(animation.frame_abs.len());
-            for (i, f) in animation.frame_abs.iter().enumerate() {
-                bnd_frames[i] = get_bnd_frame_from_abs(self.size_f, f);
+            for f in animation.frame_abs.iter() {
+                bnd_frames.push(get_bnd_frame_from_abs(self.size_f, f));
             }
             animation.frame_uv_bnd = Some(bnd_frames);
         }
