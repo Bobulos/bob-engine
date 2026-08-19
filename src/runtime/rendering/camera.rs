@@ -1,10 +1,10 @@
+#[derive(Copy, Clone)]
 pub struct Camera {
     pub position: [f32; 2], // world position the camera is looking at
     pub zoom: f32,          // 1.0 = normal, 2.0 = zoomed in
     pub viewport_width: u32,
     pub viewport_height: u32,
 }
-
 impl Camera {
     pub fn move_by(&mut self, dx: f32, dy: f32) {
         self.position[0] += dx;
@@ -41,7 +41,24 @@ impl Camera {
             [-1.0,     1.0,     0.0, 1.0],
         ]
     }
-    // Produces an orthographic projection that preserves aspect ratio
+    /// Scren pos in pixels to the world
+    pub fn screen_to_world(&self, pixel_x: u32, pixel_y: u32) -> [f32; 2] {
+        let aspect = self.viewport_width as f32 / self.viewport_height as f32;
+    
+        let half_h = 1.0 / self.zoom;
+        let half_w = half_h * aspect;
+    
+        // Convert pixels normalized [0, 1]
+        let normalized_x = pixel_x as f32 / self.viewport_width as f32;
+        let normalized_y = pixel_y as f32 / self.viewport_height as f32;
+    
+        // Convert normalized coordinates world coordinates
+        let world_x = self.position[0] - half_w + normalized_x * (half_w * 2.0);
+        let world_y = self.position[1] + half_h - normalized_y * (half_h * 2.0);
+    
+        [world_x, world_y]
+    }
+    /// Produces an orthographic projection that preserves aspect ratio
     pub fn build_matrix(&self) -> [[f32; 4]; 4] {
         let aspect = self.viewport_width as f32 / self.viewport_height as f32;
 

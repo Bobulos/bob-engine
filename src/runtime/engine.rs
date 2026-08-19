@@ -161,7 +161,7 @@ impl Engine {
     }
     const CAMERA_SPEED: f32 = 0.1;
     pub fn player_loop(&mut self) {
-        let input = self.input.read().unwrap();
+        let mut input = self.input.write().unwrap();
         if input.get_key_down(KeyCode::KeyA) {
             // world_serializer::create_scene_file_from_world(
             //     String::from_str("Bingus").unwrap(),
@@ -202,6 +202,12 @@ impl Engine {
             self.renderer.write().unwrap().camera.zoom_by(0.99);
             self.renderer.write().unwrap().update_camera();
         }
+
+        let cam_cpy = self.renderer.read().unwrap().camera.to_owned();
+        let pos = input.mouse_position;
+        let world_camera_pos = cam_cpy.screen_to_world(pos.0, pos.1);
+        //println!("cam pos {},{}", world_camera_pos[0], world_camera_pos[1]);
+        input.mouse_world_position = world_camera_pos.into();
     }
     pub fn update(&mut self) {
         self.update_entities();

@@ -1,13 +1,16 @@
 use std::collections::HashSet;
 use winit::{dpi::PhysicalPosition, event::{ElementState, KeyEvent, WindowEvent}, keyboard::PhysicalKey};
-use crate::runtime::input::{KeyCode, mouse_button::MouseButton};
+use crate::runtime::{input::{KeyCode, mouse_button::MouseButton}, math::Float2};
 
 /// Mouse x y int px
-pub struct MousePosition(u32, u32);
+pub type MousePosition = (u32, u32);
 
 pub struct Input {
     /// Mouse position
-    mouse_position: MousePosition,
+    pub mouse_position: MousePosition,
+
+    /// Mouse in world pos
+    pub mouse_world_position: Float2,
 
     /// Mouse button held down
     mouse_held: HashSet<MouseButton>,
@@ -27,7 +30,8 @@ pub struct Input {
 impl Input {
     pub fn new() -> Self {
         Self {
-            mouse_position: MousePosition(0, 0),
+            mouse_position: (0, 0),
+            mouse_world_position: Float2::ZERO,
             mouse_held: HashSet::new(),
             mouse_just_pressed: HashSet::new(),
             mouse_just_released: HashSet::new(),
@@ -36,9 +40,12 @@ impl Input {
             key_just_released: HashSet::new(),
         }
     }
-    pub fn mouse_position(&self) -> (u32, u32) {
-        (self.mouse_position.0, self.mouse_position.1)
-    }
+    // pub fn mouse_position(&self) -> (u32, u32) {
+    //     (self.mouse_position.0, self.mouse_position.1)
+    // }
+    // pub fn mouse_world_position(&self) -> Float2 {
+    //     self.mouse_world_position
+    // }
     /// Call once at the START of each frame to clear per-frame state
     pub fn flush(&mut self) {
         self.key_just_pressed.clear();
@@ -59,7 +66,7 @@ impl Input {
     }
     /// Call from App::window_event for every MouseInput event
     pub fn receive_mouse_moved(&mut self, position: PhysicalPosition<f64>) {
-        self.mouse_position = MousePosition(position.x as u32, position.y as u32);
+        self.mouse_position = (position.x as u32, position.y as u32);
     }
 
     /// Call from App::window_event for every KeyboardInput event
