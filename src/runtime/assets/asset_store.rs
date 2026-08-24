@@ -18,7 +18,7 @@ pub struct AssetStore {
     // path = hash
     path_to_hash: HashMap<String, u64>,
 }
-
+// this is deprecated needs to be removed!
 const ASSET_STORE_PATH: &str = "cfg/asset_store.json";
 
 impl AssetStore {
