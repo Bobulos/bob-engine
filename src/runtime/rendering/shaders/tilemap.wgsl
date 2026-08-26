@@ -1,4 +1,4 @@
-// ── Bindings ─
+// Bindings
 struct TilemapInfo {
     width:      u32,
     height:     u32,
@@ -24,14 +24,13 @@ struct TileUV {
 @group(0) @binding(4) var<storage, read>     tile_uvs:   array<TileUV>;   // UV per tile type
 @group(0) @binding(5) var<uniform>           map_info:   TilemapInfo;
 
-// ── Vertex output ──────────────────────────────────────────────────────────────
-
+//Vertex output
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0)       world_pos:     vec2<f32>,
 };
 
-// ── Vertex shader ──────────────────────────────────────────────────────────────
+// Vertex shader
 //
 // No vertex buffer — geometry is generated from builtins.
 //   vertex_index   0..5  → two triangles forming one quad
@@ -55,7 +54,7 @@ fn vs_main(@builtin(vertex_index) vert_idx: u32) -> VertexOutput {
     return out;
 }
 
-// ── Fragment shader ────────────────────────────────────────────────────────────
+// Fragment shader
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {

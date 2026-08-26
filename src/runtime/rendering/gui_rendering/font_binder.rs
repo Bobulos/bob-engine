@@ -8,7 +8,7 @@ use u4::{U4, U4x2};
 // impl FontBinder {
     
 // }
-pub enum FontSheetFormat {
+pub enum FontSheetBinding {
     NonStandardTestPallate
     // 600 X 240
     // A B C D E F G H I J K L M
@@ -19,13 +19,21 @@ pub enum FontSheetFormat {
     // < > ? ! S u` $ $ * @ # ^2
     
 }
-fn get_pos_from_char(c: char, font_sheet_format: FontSheetFormat) -> U4x2 {
-    let coords: U4x2 = U4x2::default();
+const MAX_TEXT_LENGTH: usize = 1024;
+pub fn get_packed_text(text: &str, binding: FontSheetBinding) -> [U4x2; MAX_TEXT_LENGTH] {
+    let mut packed = [U4x2::default(); MAX_TEXT_LENGTH];
+    for (i, c) in text.chars().enumerate() {
+        packed[i] = get_pos_from_char(c, binding);
+    }
+    
+    packed
+}
+fn get_pos_from_char(c: char, font_sheet_format: FontSheetBinding) -> U4x2 {
     let mut bind: [u8; 2] = [0, 0];
     match font_sheet_format {
-        FontSheetFormat::NonStandardTestPallate => {
+        FontSheetBinding::NonStandardTestPallate => {
             let c = c.to_ascii_lowercase();
-            let pos: [u8; 2] = match c {
+            bind = match c {
                 'a' => [0, 0],
                 'b' => [1, 0],
                 'c' => [2, 0],
@@ -101,7 +109,7 @@ fn get_pos_from_char(c: char, font_sheet_format: FontSheetFormat) -> U4x2 {
                 _ =>  [0,0]
             };
         }
-    }
+    };
     
     let left: U4 = U4::new(bind[0]).expect("font out of bounds x pos");
     let right: U4 = U4::new(bind[1]).expect("font out of bounds y pos");
