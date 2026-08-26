@@ -1,11 +1,13 @@
-/// This can be used to translate a string into uv's of a font sprite sheet
-pub struct FontBinder {
-    
-}
+use u4::{U4, U4x2};
 
-impl FontBinder {
+// /// This can be used to translate a string into uv's of a font sprite sheet
+// pub struct FontBinder {
     
-}
+// }
+
+// impl FontBinder {
+    
+// }
 pub enum FontSheetFormat {
     NonStandardTestPallate
     // 600 X 240
@@ -17,11 +19,13 @@ pub enum FontSheetFormat {
     // < > ? ! S u` $ $ * @ # ^2
     
 }
-fn get_cords_from_char(c: char, font_sheet_format: FontSheetFormat) -> [u8; 2] {
+fn get_pos_from_char(c: char, font_sheet_format: FontSheetFormat) -> U4x2 {
+    let coords: U4x2 = U4x2::default();
+    let mut bind: [u8; 2] = [0, 0];
     match font_sheet_format {
         FontSheetFormat::NonStandardTestPallate => {
             let c = c.to_ascii_lowercase();
-            let coords: [u8; 2] = match c {
+            let pos: [u8; 2] = match c {
                 'a' => [0, 0],
                 'b' => [1, 0],
                 'c' => [2, 0],
@@ -96,8 +100,11 @@ fn get_cords_from_char(c: char, font_sheet_format: FontSheetFormat) -> [u8; 2] {
                 // ^2 [11, 5]
                 _ =>  [0,0]
             };
-            return coords;
         }
     }
-    [0, 0]
+    
+    let left: U4 = U4::new(bind[0]).expect("font out of bounds x pos");
+    let right: U4 = U4::new(bind[1]).expect("font out of bounds y pos");
+    
+    U4x2::new(left, right)
 }
