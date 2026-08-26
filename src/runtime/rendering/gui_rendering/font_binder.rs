@@ -19,16 +19,16 @@ pub enum FontSheetBinding {
     // < > ? ! S u` $ $ * @ # ^2
     
 }
-const MAX_TEXT_LENGTH: usize = 1024;
-pub fn get_packed_text(text: &str, binding: FontSheetBinding) -> [U4x2; MAX_TEXT_LENGTH] {
+pub fn convert_str_to_bound<const MAX_TEXT_LENGTH :usize>(text: &str, binding: FontSheetBinding) -> [U4x2; MAX_TEXT_LENGTH] {
+    debug_assert!(text.len() < MAX_TEXT_LENGTH, "str too long {} max allowed {}", text.len(), MAX_TEXT_LENGTH);
     let mut packed = [U4x2::default(); MAX_TEXT_LENGTH];
     for (i, c) in text.chars().enumerate() {
-        packed[i] = get_pos_from_char(c, binding);
+        packed[i] = get_pos_from_char(c, &binding);
     }
     
     packed
 }
-fn get_pos_from_char(c: char, font_sheet_format: FontSheetBinding) -> U4x2 {
+fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
     let mut bind: [u8; 2] = [0, 0];
     match font_sheet_format {
         FontSheetBinding::NonStandardTestPallate => {

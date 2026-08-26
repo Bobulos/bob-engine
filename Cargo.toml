@@ -24,6 +24,8 @@ serde_json = "1.0"
 seahash = "4.1.0"
 # stable_component_id = { path = "./macros/stable_component_id" }
 component = { path = "./macros/component" }
+
+# need to get rid of this
 rust-embed = { version = "8", features = ["debug-embed"] }
 wgpu = "29.0.0"
 pollster = "0.4.0"
@@ -31,4 +33,6 @@ image = "0.25"
 rand = "0.10.1"
 macro_rules_attribute = "0.2.2"
 u4 = "0.1.2"
-fixed_str = "0.9.1"
+fixed_str = { version = "0.9.1", features = ["serde"]}
+with = "0.0.0"
+serde_with = "3.22.0"

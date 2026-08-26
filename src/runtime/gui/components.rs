@@ -4,3 +4,4 @@ pub mod gui_text_box;
 
 pub use gui_shape::{GuiBorder, GuiShape};
 pub use gui_transform::{GuiAnchor, GuiTransform};
+pub use gui_text_box::GuiTextBox;
