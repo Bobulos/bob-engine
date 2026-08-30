@@ -33,11 +33,13 @@ impl SystemBase for GuiTextRenderSystem {
         world.for_each3_mut::<GuiTextBox, GuiTransform, BatchHandle>(
             |_entity, txt, transform, batch_handle| {
                 if batch_handle.index != usize::MAX && txt.dirty && txt.visible {
-                    
-                    let batch = &mut renderer_lock.batches[batch_handle.batch_index];
 
+                    //println!("running text rendering");
+                    txt.dirty = false;
+                    let batch = &mut renderer_lock.batches[batch_handle.batch_index];
+                    //println!("{} stride, {} cap, {} len", batch.instance_stride, batch.instance_capacity, batch.instances.len());
                     let chars = txt.generate_char_instances(transform.position);
-                    
+                    //println!("{:?}",chars);
                     let instances: &mut [GuiCharInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
 
                     for c in chars.iter() {
@@ -47,7 +49,6 @@ impl SystemBase for GuiTextRenderSystem {
                     // 
                     // ALL THIS NEEDS TO DO IS DUMP THE 
                     // CREATED INSTANCE INTO THE BUFFER
-                    
                 }
             },
         );

@@ -18,21 +18,19 @@ fn vs_main(
     @location(3) i_size: vec2<f32>,
     @location(4) i_uv_offset: vec2<f32>,
     @location(5) i_uv_scale: vec2<f32>,
-    
 ) -> VertexOutput {
     var out: VertexOutput;
 
-    // Scale vertex
     let scaled = v_pos * i_size;
+    let world_pos = i_pos + scaled;
 
-    // Translate to world position
-    let world_pos = rotated + i_pos;
-
-    // Camera transform
     out.clip_position = camera * vec4<f32>(world_pos, 0.0, 1.0);
 
-    // Texture coordinates
-    out.tex_coords = (v_uv * i_uv_scale) + i_uv_offset;
+    // Flip the texture horizontally (across the Y axis).
+    out.tex_coords = vec2<f32>(
+        i_uv_offset.x + (v_uv.x) * i_uv_scale.x,
+        i_uv_offset.y + (1.0 - v_uv.y) * i_uv_scale.y
+    );
 
     return out;
 }

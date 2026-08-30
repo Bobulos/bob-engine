@@ -15,7 +15,7 @@ use crate::runtime::math::Float2;
 // 
 use super::PackedText;
 
-#[derive(Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Default, serde::Serialize, serde::Deserialize, Debug)]
 pub enum FontSheetBinding {
     #[default]
     NonStandardTestPallate,
@@ -40,7 +40,7 @@ pub fn get_uv_offset(binding: FontSheetBinding, c: &u8, dimensions: [f32; 2]) ->
 
     let c_x: f32 = c[0].into();
     let c_y: f32 = c[1].into();
-
+    //print!("[{},{}]", c_x, c_y);
     [c_x/dimensions[0], c_y/dimensions[1]]
 } 
 pub fn get_dimensions(binding: FontSheetBinding) -> [f32; 2] {
@@ -135,6 +135,7 @@ fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
                 // Degreas [8, 5]
                 '@' => [9, 5],
                 '#' => [10, 5],
+                ' ' => [14, 0],
                 // ^2 [11, 5]
                 _ =>  [0,0]
             };

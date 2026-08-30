@@ -1,6 +1,8 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
+use crate::runtime::gui::components::GuiTextBox;
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
+use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
@@ -578,6 +580,13 @@ impl Renderer {
                 shader_source: include_str!("shaders/gui_shape.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
+        );
+        self.register_pipeline::<GuiCharInstance>(
+            PipelineKey::GuiText, 
+            PipelineConfig { 
+                shader_source: include_str!("shaders/text.wgsl"), 
+                blend: wgpu::BlendState::ALPHA_BLENDING, 
+            }
         );
 
         self.msaa_texture = Some(self.create_msaa_texture());

@@ -13,12 +13,13 @@ use crate::runtime::rendering::gui_rendering::font_binder::FontSheetBinding;
 // 1 kb per text box
 const MAX_TEXT_LENGTH: usize = 1024;
 
-#[derive(Component!)]
+#[derive(Component!, Debug)]
 pub struct GuiTextBox {
     pub dirty: bool,
     pub visible: bool,
     pub font_binding: FontSheetBinding,
     pub font_size: f32,
+    pub used_length: usize,
     pub text: FixedStr<MAX_TEXT_LENGTH>,
     pub packed_text: PackedText<MAX_TEXT_LENGTH>,
 }
@@ -29,8 +30,9 @@ impl GuiTextBox {
         Self {
             dirty: true,
             visible: true,
+            used_length: text.len() - 1,
             font_binding,
-            font_size: 12.0,
+            font_size: 100.0,
             text: FixedStr::from_slice(text.as_bytes()),
             packed_text: packed,
         }
@@ -43,16 +45,27 @@ impl GuiTextBox {
         
         for (i, c_packed) in self.packed_text.packed.iter().enumerate() {
             
-            let w_pos = pos + (i as f32);
+            let w_pos = Float2::new(pos.x + ((i as f32) * self.font_size), pos.y);
 
             let uv_offset: [f32; 2] = font_binder::get_uv_offset(self.font_binding, c_packed, dimensions);
-
+            
             instances[i] = GuiCharInstance { 
                 position: w_pos.into(), 
                 size: [self.font_size; 2], 
                 uv_offset, 
                 uv_scale 
+            };
+
+            // don't waste cycles on empty chars
+            if i >= self.used_length {
+                break;
             }
+            // println!("{:?}", GuiCharInstance { 
+            //     position: w_pos.into(), 
+            //     size: [self.font_size; 2], 
+            //     uv_offset, 
+            //     uv_scale 
+            // });
         }
         instances
     }

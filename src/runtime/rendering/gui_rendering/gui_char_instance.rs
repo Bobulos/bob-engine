@@ -4,7 +4,7 @@ use wgpu::VertexAttribute;
 use std::mem::size_of;
 
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
 pub struct GuiCharInstance {
     pub position: [f32; 2],
     pub size: [f32; 2],

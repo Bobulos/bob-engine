@@ -3,7 +3,7 @@ use serde;
 
 
 #[serde_as]
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct PackedText<const N: usize> {
     #[serde_as(as = "Bytes")] // Much faster specialized byte-array handling
     pub packed: [u8; N],

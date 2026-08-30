@@ -288,7 +288,15 @@ impl Engine {
                     Arc::clone(&self.renderer)
                 ),
             ),
-            i32::MIN + 1,
+            i32::MIN + 3,
+        );
+        let _ = group.register_system(
+            Box::new(
+                rendering::gui_rendering::GuiTextRenderSystem::new(
+                    Arc::clone(&self.renderer)
+                ),
+            ),
+            i32::MIN + 2,
         );
         let _ = group.register_system(
             Box::new(
