@@ -6,7 +6,7 @@ use serde;
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy)]
 pub struct PackedText<const N: usize> {
     #[serde_as(as = "Bytes")] // Much faster specialized byte-array handling
-    packed: [u8; N],
+    pub packed: [u8; N],
 }
 
 impl<const N: usize> PackedText<N> {

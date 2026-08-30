@@ -1,3 +1,5 @@
+use std::default;
+
 use u4::{U4, U4x2};
 
 // /// This can be used to translate a string into uv's of a font sprite sheet
@@ -5,16 +7,21 @@ use u4::{U4, U4x2};
     
 // }
 
+use crate::runtime::math::Float2;
+
 // impl FontBinder {
     
 // }
 // 
 use super::PackedText;
 
+#[derive(Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub enum FontSheetBinding {
+    #[default]
     NonStandardTestPallate,
     StandardASCII
     // 600 X 240
+    // 15 X 6
     // A B C D E F G H I J K L M
     // N O P Q R S T U V W X Y Z
     // 0 1 2 3 4 5 6 7 8 9
@@ -24,6 +31,24 @@ pub enum FontSheetBinding {
     
 }
 
+pub fn get_uv_scale(binding: FontSheetBinding) -> [f32; 2] {
+    let d = get_dimensions(binding);
+    [1.0/d[0], 1.0/d[1]]
+}
+pub fn get_uv_offset(binding: FontSheetBinding, c: &u8, dimensions: [f32; 2]) -> [f32; 2] {
+    let c = U4x2::from_ref(c).unpack(); 
+
+    let c_x: f32 = c[0].into();
+    let c_y: f32 = c[1].into();
+
+    [c_x/dimensions[0], c_y/dimensions[1]]
+} 
+pub fn get_dimensions(binding: FontSheetBinding) -> [f32; 2] {
+    match binding {
+        FontSheetBinding::NonStandardTestPallate => [15.0, 6.0],
+        FontSheetBinding::StandardASCII => [16.0, 16.0],
+    }
+}
 pub fn str_to_packed_text<const MAX_TEXT_LENGTH :usize>(text: &str, binding: FontSheetBinding) -> PackedText<MAX_TEXT_LENGTH> {
     debug_assert!(text.len() < MAX_TEXT_LENGTH, "str too long {} max allowed {}", text.len(), MAX_TEXT_LENGTH);
     let mut packed = [0; MAX_TEXT_LENGTH];

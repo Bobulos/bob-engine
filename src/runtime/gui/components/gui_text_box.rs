@@ -3,9 +3,12 @@ use u4::U4x2;
 use fixed_str::FixedStr;
 use serde_with;
 
+use crate::runtime::math::Float2;
+use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::PackedText;
 use crate::runtime::rendering::gui_rendering::font_binder;
 use crate::Component;
+use crate::runtime::rendering::gui_rendering::font_binder::FontSheetBinding;
 
 // 1 kb per text box
 const MAX_TEXT_LENGTH: usize = 1024;
@@ -14,19 +17,43 @@ const MAX_TEXT_LENGTH: usize = 1024;
 pub struct GuiTextBox {
     pub dirty: bool,
     pub visible: bool,
+    pub font_binding: FontSheetBinding,
+    pub font_size: f32,
     pub text: FixedStr<MAX_TEXT_LENGTH>,
     pub packed_text: PackedText<MAX_TEXT_LENGTH>,
 }
 impl GuiTextBox {
-    pub fn new(text: String) -> Self {
+    pub fn new(text: String, font_binding: FontSheetBinding) -> Self {
         debug_assert!(text.len() < MAX_TEXT_LENGTH, "text length must be less than {} characters", MAX_TEXT_LENGTH);
         let packed = font_binder::str_to_packed_text::<MAX_TEXT_LENGTH>(&text, font_binder::FontSheetBinding::NonStandardTestPallate);
         Self {
             dirty: true,
             visible: true,
+            font_binding,
+            font_size: 12.0,
             text: FixedStr::from_slice(text.as_bytes()),
             packed_text: packed,
         }
     }
-    
+    pub fn generate_char_instances(&self, pos: Float2) -> [GuiCharInstance; MAX_TEXT_LENGTH] {
+        let mut instances = [GuiCharInstance::default(); MAX_TEXT_LENGTH];
+
+        let uv_scale: [f32; 2] = font_binder::get_uv_scale(self.font_binding);
+        let dimensions = font_binder::get_dimensions(self.font_binding);
+        
+        for (i, c_packed) in self.packed_text.packed.iter().enumerate() {
+            
+            let w_pos = pos + (i as f32);
+
+            let uv_offset: [f32; 2] = font_binder::get_uv_offset(self.font_binding, c_packed, dimensions);
+
+            instances[i] = GuiCharInstance { 
+                position: w_pos.into(), 
+                size: [self.font_size; 2], 
+                uv_offset, 
+                uv_scale 
+            }
+        }
+        instances
+    }
 }

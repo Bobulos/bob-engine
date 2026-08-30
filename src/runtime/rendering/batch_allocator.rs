@@ -1,6 +1,7 @@
 use crate::runtime::assets::AssetHandle;
 use crate::runtime::ecs::Entity;
 use crate::runtime::ecs::{DynamicWorld, SystemBase};
+use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use super::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::atlas_handle::AtlasHandle;
@@ -48,6 +49,10 @@ impl BatchAllocator {
         match pipeline_key {
             PipelineKey::GuiShape => {
                 let instances = vec![GuiShapeInstance::default(); runtime::engine::RENDER_BATCH_SIZE];
+                renderer_lock.create_batch(asset_handle, &instances, pipeline_key)
+            }
+            PipelineKey::GuiText => {
+                let instances = vec![GuiCharInstance::default(); runtime::engine::RENDER_BATCH_SIZE];
                 renderer_lock.create_batch(asset_handle, &instances, pipeline_key)
             }
             _ => {

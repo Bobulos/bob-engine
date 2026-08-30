@@ -12,14 +12,14 @@ pub struct GuiCharInstance {
     pub uv_scale: [f32; 2],
     // mabeye add rot later
 }
-impl GuiCharInstance {
-    pub fn defualt() -> Self {
+impl Default for GuiCharInstance {
+    fn default() -> Self {
         Self { 
             position: [f32::MAX, f32::MAX], 
             size: [1.0, 1.0], 
             uv_offset: [0.0, 0.0], 
             uv_scale: [1.0, 1.0] 
-        }
+        }   
     }
 }
 impl VertexLayout for GuiCharInstance {

@@ -26,40 +26,24 @@ impl SystemBase for GuiTextRenderSystem {
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         let mut renderer_lock = self.renderer.write().unwrap();
 
+
+        // this doesn't need to use the batch handle instance
+        // track char instance seperately
+        let mut i: usize = 0;
         world.for_each3_mut::<GuiTextBox, GuiTransform, BatchHandle>(
             |_entity, txt, transform, batch_handle| {
                 if batch_handle.index != usize::MAX && txt.dirty && txt.visible {
                     
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
 
+                    let chars = txt.generate_char_instances(transform.position);
                     
                     let instances: &mut [GuiCharInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
 
-                    // let mut border_color: Color = Color::transparent(); 
-                    // let mut border_width: f32 = 0.0;
-                    // let mut border_radius: f32 = 0.0;
-                    // match shape.border {
-                    //     GuiBorder::Bordered(color, width, radius) => {
-                    //         border_color = color;
-                    //         border_radius = radius;
-                    //         border_width = width;
-                    //     } 
-                    //     GuiBorder::Borderless => {}
-                    // }
-                    // let position = transform.position;                    
-                    // //let position = transform.position;
-                    instances[batch_handle.index] = GuiCharInstance {
-                        position: position.into(),
-                        size: transform.size.into(),
-                        uv_offset: shape.uv_offset,
-                        uv_scale: shape.uv_scale,
-                        color: shape.fill_color.value,
-                        corner_radius: border_radius,
-                        border_color: border_color.value,
-                        border_width: border_width,
-                        _pad: [0; 3],
-                    };
-                    
+                    for c in chars.iter() {
+                        instances[i] = *c;
+                        i += 1;
+                    }
                     // 
                     // ALL THIS NEEDS TO DO IS DUMP THE 
                     // CREATED INSTANCE INTO THE BUFFER
