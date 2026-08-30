@@ -1,7 +1,7 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
-use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
+use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
@@ -12,36 +12,11 @@ use std::sync::OnceLock;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-
-/// Identifies a compiled render pipeline. Add variants here for each new shader.
-#[derive(Debug, Clone, Copy, serde::Deserialize, serde::Serialize, PartialEq, Eq, Hash)]
-pub enum PipelineKey {
-    /// Standard alpha-blended sprite shader.
-    Sprite,
-    /// Additive blending good for particles, glows, fire.
-    Additive,
-    /// Screen space ui
-    Gui,
-    // Custom/user-registered pipeline identified by an arbitrary string.
-    //Custom(String)
-}
-impl Default for PipelineKey {
-    fn default() -> Self {
-        Self::Sprite
-    }
-}
+use super::PipelineKey;
+use super::Batch;
 
 
-pub struct Batch {
-    pub pipeline_key: PipelineKey,
-    pub instances: Vec<u8>,
-    pub instance_stride: usize,
-    instance_buffer: wgpu::Buffer,
-    instance_capacity: usize, // track buffer size to know when to reallocate
-    num_instances: u32,
-    bind_group: wgpu::BindGroup,
-    _texture: Texture, // keeps GPU texture alive
-}
+
 
 pub struct PipelineConfig<'a> {
     pub shader_source: &'a str,
@@ -277,8 +252,8 @@ impl Renderer {
         let raw: Vec<u8> = bytemuck::cast_slice(instances).to_vec();
         let stride = std::mem::size_of::<I>();
     
-        let instance_buffer = self.make_instance_buffer_raw(&raw, instances.len());
-        let bind_group = self.make_bind_group(&tex, &pipeline_key);
+        let instance_buffer = self.create_instance_buffer_raw(&raw, instances.len());
+        let bind_group = self.create_bind_group(&tex, &pipeline_key);
     
         self.batches.push(Batch {
             pipeline_key,
@@ -293,7 +268,7 @@ impl Renderer {
         self.batches.len() - 1
     }
    
-    fn make_instance_buffer_raw(&self, data: &[u8], count: usize) -> wgpu::Buffer {
+    fn create_instance_buffer_raw(&self, data: &[u8], count: usize) -> wgpu::Buffer {
         let capacity = (count * 2).max(1);
         let stride = if count > 0 { data.len() / count } else { 1 };
         let buffer = self.device().create_buffer(&wgpu::BufferDescriptor {
@@ -394,7 +369,7 @@ impl Renderer {
     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
-        let bind_group = self.make_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
+        let bind_group = self.create_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
 
         let batch = &mut self.batches[batch_idx];
         batch.bind_group = bind_group;
@@ -596,14 +571,15 @@ impl Renderer {
                 blend: wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
             },
         );
-        // ui
-        self.register_pipeline::<GuiInstance>(
-            PipelineKey::Gui, 
+        // gui
+        self.register_pipeline::<GuiShapeInstance>(
+            PipelineKey::GuiShape, 
             PipelineConfig {
-                shader_source: include_str!("shaders/gui.wgsl"),
+                shader_source: include_str!("shaders/gui_shape.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
+
         self.msaa_texture = Some(self.create_msaa_texture());
     }
     fn init_camera(&mut self) {
@@ -631,6 +607,8 @@ impl Renderer {
 
     // Batch helpers
 
+    // I think this is no longer used
+    
     fn make_instance_buffer(&self, instances: &[SpriteInstance]) -> wgpu::Buffer {
         // Allocate 2x requested capacity so moderate growth avoids reallocation
         let capacity = (instances.len() * 2).max(1);
@@ -646,9 +624,10 @@ impl Renderer {
         buffer
     }
 
-    fn make_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
+    fn create_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
         let camera_buf = match pipeline_key {
-            PipelineKey::Gui => self.gui_camera_buffer.as_ref().unwrap(),
+            PipelineKey::GuiShape => self.gui_camera_buffer.as_ref().unwrap(),
+            PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
             _ => self.camera_buffer.as_ref().unwrap(),
         };
     
@@ -671,7 +650,7 @@ impl Renderer {
             ],
         })
     }
-
+    // need to destroy this
     // Perframe helpers 
     pub fn update_tilemap(
         &mut self,

@@ -9,7 +9,7 @@ use crate::runtime::phys::connector::PhysCxn;
 use crate::runtime::rendering::BatchHandle;
 use crate::runtime::rendering::Color;
 use crate::runtime::gui::components::{GuiBorder, GuiShape, GuiTransform, GuiAnchor};
-use crate::runtime::rendering::renderer::PipelineKey;
+use crate::runtime::rendering::PipelineKey;
 use crate::runtime::rendering::sprite_rendering::components::Sprite;
 use crate::runtime::input::Input;
 use std::fs::FileType;
@@ -164,7 +164,7 @@ impl TestSystem {
         ];
         for anc in ancs {
             let entity = world.create_entity();
-            world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::Gui));
+            world.add_component_safe(entity, BatchHandle::new(self.ui.unwrap(), PipelineKey::GuiShape));
             world.add_component_safe(entity, GuiTransform::at_anchor(
                 anc,
                 Float2::new(100.0, 100.0)

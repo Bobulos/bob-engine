@@ -1,0 +1,3 @@
+when adding a new thing to runtime make sure if it is meant to be interfaced 
+with give it its own folder in runtime eg gui. in the future need to seperate public
+and private api more.

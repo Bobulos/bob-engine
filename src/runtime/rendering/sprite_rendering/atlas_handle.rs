@@ -1,4 +1,4 @@
-use crate::runtime::rendering::renderer::PipelineKey;
+use crate::runtime::rendering::PipelineKey;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Stores the renderer's batch index for a given atlas.

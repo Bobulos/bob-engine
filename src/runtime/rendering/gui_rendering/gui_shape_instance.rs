@@ -2,7 +2,7 @@ use crate::runtime::rendering::VertexLayout;
 use wgpu::VertexFormat::*;
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct GuiInstance {
+pub struct GuiShapeInstance {
     pub position:     [f32; 2],  // location 2
     pub size:         [f32; 2],  // location 3
     pub uv_offset:    [f32; 2],  // location 4
@@ -14,11 +14,11 @@ pub struct GuiInstance {
     pub _pad:         [u32; 3],  // realign to 16 bytes
 }
 
-impl VertexLayout for GuiInstance {
+impl VertexLayout for GuiShapeInstance {
     fn layout() -> wgpu::VertexBufferLayout<'static> {
         use std::mem::size_of;
         wgpu::VertexBufferLayout {
-            array_stride: size_of::<GuiInstance>() as u64,
+            array_stride: size_of::<GuiShapeInstance>() as u64,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
                 wgpu::VertexAttribute { shader_location: 2, offset: 0,  format: Float32x2 }, // position
@@ -34,7 +34,7 @@ impl VertexLayout for GuiInstance {
         }
     }
 }
-impl Default for GuiInstance {
+impl Default for GuiShapeInstance {
     fn default() -> Self {
         Self { 
             position: [f32::MIN, f32::MIN], 

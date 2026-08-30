@@ -8,8 +8,12 @@ use u4::{U4, U4x2};
 // impl FontBinder {
     
 // }
+// 
+use super::PackedText;
+
 pub enum FontSheetBinding {
-    NonStandardTestPallate
+    NonStandardTestPallate,
+    StandardASCII
     // 600 X 240
     // A B C D E F G H I J K L M
     // N O P Q R S T U V W X Y Z
@@ -19,14 +23,15 @@ pub enum FontSheetBinding {
     // < > ? ! S u` $ $ * @ # ^2
     
 }
-pub fn convert_str_to_bound<const MAX_TEXT_LENGTH :usize>(text: &str, binding: FontSheetBinding) -> [U4x2; MAX_TEXT_LENGTH] {
+
+pub fn str_to_packed_text<const MAX_TEXT_LENGTH :usize>(text: &str, binding: FontSheetBinding) -> PackedText<MAX_TEXT_LENGTH> {
     debug_assert!(text.len() < MAX_TEXT_LENGTH, "str too long {} max allowed {}", text.len(), MAX_TEXT_LENGTH);
-    let mut packed = [U4x2::default(); MAX_TEXT_LENGTH];
+    let mut packed = [0; MAX_TEXT_LENGTH];
     for (i, c) in text.chars().enumerate() {
-        packed[i] = get_pos_from_char(c, &binding);
+        packed[i] = get_pos_from_char(c, &binding).packed;
     }
     
-    packed
+    PackedText::new(packed.into())
 }
 fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
     let mut bind: [u8; 2] = [0, 0];
@@ -108,6 +113,9 @@ fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
                 // ^2 [11, 5]
                 _ =>  [0,0]
             };
+        }
+        FontSheetBinding::StandardASCII => {
+            panic!("NOT IMPLEMENTED STANDARD ASCII")
         }
     };
     

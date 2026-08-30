@@ -284,7 +284,7 @@ impl Engine {
         let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
         let _ = group.register_system(
             Box::new(
-                rendering::gui_rendering::GuiRenderSystem::new(
+                rendering::gui_rendering::GuiShapeRenderSystem::new(
                     Arc::clone(&self.renderer)
                 ),
             ),

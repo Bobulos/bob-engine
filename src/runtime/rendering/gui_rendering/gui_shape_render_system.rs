@@ -2,7 +2,7 @@ use crate::runtime::math::Float2;
 use crate::runtime::rendering::Color;
 use crate::runtime::ecs::{DynamicWorld, Entity, SystemBase};
 use crate::runtime::gui::components::{gui_shape::GuiShape, gui_transform::GuiTransform};
-use crate::runtime::rendering::gui_rendering::gui_instance::GuiInstance;
+use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use crate::runtime::gui::components::GuiBorder;
 use crate::runtime::rendering::Renderer;
 use crate::runtime::rendering::BatchHandle;
@@ -10,17 +10,17 @@ use std::sync::{Arc, RwLock};
 
 // #[path = "../engine//ecs/component_store.rs"]
 // mod component_store;
-pub struct GuiRenderSystem {
+pub struct GuiShapeRenderSystem {
     renderer: Arc<RwLock<Renderer>>,
 }
-impl GuiRenderSystem {
+impl GuiShapeRenderSystem {
     pub fn new(renderer: Arc<RwLock<Renderer>>) -> Self {
         Self { renderer: renderer }
     }
 }
 
 const MAX_CLEAN_PER_FRAME: usize = 8;
-impl SystemBase for GuiRenderSystem {
+impl SystemBase for GuiShapeRenderSystem {
     fn on_start(&mut self, _world: &Arc<DynamicWorld>) {}
     fn on_update(&mut self, world: &Arc<DynamicWorld>) {
         let mut renderer_lock = self.renderer.write().unwrap();
@@ -35,7 +35,7 @@ impl SystemBase for GuiRenderSystem {
                     shape.dirty = false;
                     
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
-                    let instances: &mut [GuiInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
+                    let instances: &mut [GuiShapeInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
 
                     let mut border_color: Color = Color::transparent(); 
                     let mut border_width: f32 = 0.0;
@@ -50,7 +50,7 @@ impl SystemBase for GuiRenderSystem {
                     }
                     let position = transform.position;                    
                     //let position = transform.position;
-                    instances[batch_handle.index] = GuiInstance {
+                    instances[batch_handle.index] = GuiShapeInstance {
                         position: position.into(),
                         size: transform.size.into(),
                         uv_offset: shape.uv_offset,

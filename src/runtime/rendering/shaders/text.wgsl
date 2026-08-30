@@ -7,6 +7,8 @@ struct VertexOutput {
     @location(0) tex_coords: vec2<f32>,
 };
 
+
+// v for vertex i for instance
 @vertex
 fn vs_main(
     @location(0) v_pos: vec2<f32>,
@@ -16,21 +18,12 @@ fn vs_main(
     @location(3) i_size: vec2<f32>,
     @location(4) i_uv_offset: vec2<f32>,
     @location(5) i_uv_scale: vec2<f32>,
-    @location(6) i_rotation: f32, // rotation in radians
+    
 ) -> VertexOutput {
     var out: VertexOutput;
 
     // Scale vertex
     let scaled = v_pos * i_size;
-
-    // Rotation matrix
-    let c = cos(i_rotation);
-    let s = sin(i_rotation);
-
-    let rotated = vec2<f32>(
-        scaled.x * c - scaled.y * s,
-        scaled.x * s + scaled.y * c
-    );
 
     // Translate to world position
     let world_pos = rotated + i_pos;

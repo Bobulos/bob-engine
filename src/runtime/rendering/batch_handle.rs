@@ -1,6 +1,6 @@
 use crate::Component;
 use crate::runtime::assets::AssetHandle;
-use crate::runtime::rendering::renderer::PipelineKey;
+use super::PipelineKey;
 
 #[derive(Component!)]
 pub struct BatchHandle {

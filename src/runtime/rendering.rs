@@ -10,8 +10,11 @@ pub mod gui_rendering;
 pub mod batch_allocator;
 pub mod batch_handle;
 pub mod color;
+pub mod pipeline_key;
+pub mod batch;
 
-
+pub use batch::Batch;
+pub use pipeline_key::PipelineKey;
 pub use color::Color;
 pub use batch_handle::BatchHandle;
 pub use vertex_layout::VertexLayout;
