@@ -38,7 +38,7 @@ impl SystemBase for GuiTextRenderSystem {
                     txt.dirty = false;
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
                     //println!("{} stride, {} cap, {} len", batch.instance_stride, batch.instance_capacity, batch.instances.len());
-                    let chars = txt.generate_char_instances(transform.position);
+                    let chars = txt.generate_char_instances(transform.position, transform.size.x);
                     //println!("{:?}",chars);
                     let instances: &mut [GuiCharInstance] = bytemuck::cast_slice_mut(&mut batch.instances);
 

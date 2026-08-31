@@ -6,7 +6,7 @@ pub struct SpriteFrame {
     pub frame: u16,
 }
 impl SpriteFrame {
-    pub fn new() -> Self {
-        Self { frame: 0 }
+    pub fn new(frame: u16) -> Self {
+        Self { frame }
     }
 }

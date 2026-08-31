@@ -1,7 +1,7 @@
 use crate::runtime::{math::Float2, rendering::sprite_rendering::{SpriteAnimation, components::{Sprite, SpriteFrame, sprite, sprite_frame}}};
 
 // Forgiveness to correct bad clamping (expressed as a fraction of a single cell)
-pub const BORDER_EDGE_WIDTH: f32 = 0.01;
+pub const BORDER_EDGE_WIDTH: f32 = 0.05;
 
 #[derive(Clone)]
 pub struct SpriteSheetBinder {
