@@ -2,7 +2,9 @@ pub mod runtime;
 pub mod test;
 pub mod app;
 pub mod constants;
+pub mod app_context;
 
+pub use crate::app_context::AppContext;
 pub use serde;
 pub use component::component;
 pub use component::StableID;

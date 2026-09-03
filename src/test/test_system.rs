@@ -1,4 +1,3 @@
-use crate::app::WINDOW_SIZE;
 use crate::runtime::assets::AssetHandle;
 use crate::runtime::assets::AssetStore;
 use crate::runtime::ecs::Entity;
@@ -149,7 +148,7 @@ impl TestSystem {
         }
     }
     pub fn test_gui(&mut self, world: &Arc<DynamicWorld>) {
-        let size = crate::app::WINDOW_SIZE;
+        let size = crate::app::GLOBAL_APP_CONTEXT.get().unwrap().window_size;
 
         let ancs = [
             GuiAnchor::BottomLeft, 

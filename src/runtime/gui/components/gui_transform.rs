@@ -1,6 +1,5 @@
 use crate::runtime::math::Float2;
 use crate::Component;
-use crate::app::WINDOW_SIZE;
 
 pub enum GuiAnchor {
     TopLeft,
@@ -39,10 +38,11 @@ impl GuiTransform {
             GuiAnchor::BottomRight => Float2::new(1.0, 1.0),
         };
 
+        let window_size = crate::app::GLOBAL_APP_CONTEXT.get().unwrap().window_size;
         // Point on screen this anchor refers to.
         let anchor_screen_pos = Float2::new(
-            anchor_point.x * WINDOW_SIZE.0 as f32,
-            anchor_point.y * WINDOW_SIZE.1 as f32,
+            anchor_point.x * window_size.0 as f32,
+            anchor_point.y * window_size.1 as f32,
         );
 
         // Offset by half the size so the transform is centered on the anchor point.

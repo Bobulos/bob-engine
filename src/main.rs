@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let event_loop = EventLoop::new()?;
     let mut asset_store = AssetStore::new();
     include_asset!(&mut asset_store, "../assets/Tux.png");
-    let mut app = App::new(Engine::new(), asset_store);
+    let mut app = App::new(Engine::new(), AppContext::default(), asset_store);
     
     event_loop.run_app(&mut app)?; 
     Ok(())

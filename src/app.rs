@@ -1,3 +1,4 @@
+use crate::AppContext;
 use crate::runtime::Engine;
 use crate::runtime::assets::AssetStore;
 use crate::runtime::rendering;
@@ -9,9 +10,10 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Window, WindowAttributes};
 use winit::event::ElementState;
 
-pub static WINDOW_SIZE: (u32, u32) = (960, 540);
-pub static FULLSCREEN: bool = false;
+
+pub static GLOBAL_APP_CONTEXT: std::sync::OnceLock<AppContext> = std::sync::OnceLock::new();
 pub struct App {
+    context: AppContext,
     window: Option<Arc<Window>>,
     engine: Engine,
     included_assets: AssetStore,
@@ -27,11 +29,15 @@ pub struct App {
 //     }
 // }
 impl App {
-    pub fn new(engine: Engine, included_assets: AssetStore) -> Self {
+    pub fn new(engine: Engine, context: AppContext, included_assets: AssetStore) -> Self {
+        // Realy should use a lazy lock but this is the only write ig its fine
+        GLOBAL_APP_CONTEXT.set(context.clone()).unwrap();
+       
         Self { 
             window: None, 
             engine, 
             included_assets,
+            context,
         }
     }
     // pub fn set_included_assets(&mut self, asset_store: AssetStore) {
@@ -52,11 +58,11 @@ impl ApplicationHandler for App {
             let mut attributes = WindowAttributes::default();
             attributes.title = "bob_engine".to_string();
             attributes.inner_size = Some(Size::new(Size::Physical(PhysicalSize::new(
-                WINDOW_SIZE.0,
-                WINDOW_SIZE.1,
+                self.context.window_size.0,
+                self.context.window_size.1,
             ))));
 
-            if FULLSCREEN {
+            if self.context.full_screen {
                 attributes.fullscreen = Some(Fullscreen::Borderless(None));
             }
 
