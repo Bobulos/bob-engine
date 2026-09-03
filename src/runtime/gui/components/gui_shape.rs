@@ -3,6 +3,8 @@ use serde;
 use crate::{Component, runtime::rendering::Color};
 
 #[derive(Debug, Clone, Copy, Default, serde::Deserialize, serde::Serialize)]
+
+/// For bordered its color, width, and radius
 pub enum GuiBorder {
     #[default]
     Borderless,
