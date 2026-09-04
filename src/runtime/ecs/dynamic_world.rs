@@ -195,7 +195,49 @@ impl DynamicWorld {
     pub fn entity_count(&self) -> usize {
         self.alive.read().unwrap().iter().filter(|&&a| a).count()
     }
-
+    
+    // singleton crud
+    pub fn create_singleton(&mut self, component: ComponentID, value: Arc<RwLock<dyn AnySingletonStore>>) {
+        self.singletons.write().unwrap().insert(component, value);
+    }
+    pub fn destroy_singleton<T: 
+        StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static,>(&self, component: T) 
+    {
+        self.singletons.write().unwrap().remove(&component.as_any().type_id());
+    }
+    pub fn get_singleton<T: 
+        StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static>(&self, component: T) -> Option<T>
+    {
+        let s_lock = self.singletons.read();
+        let f_stor = s_lock.unwrap().get(&T::ID);
+        
+        if let Some(u_stor) = f_stor {
+            let v = u_stor.read().unwrap();
+            let stor = v.as_any().downcast_ref::<SingletonStore<T>>().unwrap();
+            let f_s = stor.get();
+        }
+        
+        None
+    }
+    
     // Component CRUD
 
     pub fn register_component<
