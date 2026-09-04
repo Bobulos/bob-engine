@@ -85,7 +85,7 @@ pub trait AnyComponentStore: Any + Send + Sync {
     fn remove(&mut self, entity: usize);
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
-    fn serialize_component(&self, entity_id: usize) -> Option<serde_json::Value>;
+    fn serialize(&self, entity_id: usize) -> Option<serde_json::Value>;
 }
 
 impl<
@@ -119,7 +119,7 @@ where
     }
 
     /// Pretty json oriented
-    fn serialize_component(&self, entity_id: usize) -> Option<serde_json::Value> {
+    fn serialize(&self, entity_id: usize) -> Option<serde_json::Value> {
         if let Some(c) = &self.get(entity_id) {
             let ser = serde_json::to_value(c);
             return Some(ser.unwrap());

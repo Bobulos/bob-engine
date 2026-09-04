@@ -4,6 +4,7 @@ use crate::StableTypeID;
 use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;
 use crate::runtime::ecs::query::QueryFilter;
+use crate::runtime::ecs::{SingletonStore, AnySingletonStore};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -12,7 +13,8 @@ pub struct Entity(pub usize);
 type ComponentID = u64;
 
 pub struct DynamicWorld {
-    pub storages: RwLock<HashMap<ComponentID, Arc<RwLock<Box<dyn AnyComponentStore>>>>>,
+    pub singletons: RwLock<HashMap<ComponentID, Arc<RwLock<dyn AnySingletonStore>>>>,
+    pub storages: RwLock<HashMap<ComponentID, Arc<RwLock<dyn AnyComponentStore>>>>,
     alive: RwLock<Vec<bool>>,
     pub entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
@@ -89,6 +91,7 @@ macro_rules! impl_for_each_mut {
 impl DynamicWorld {
     pub fn new() -> Self {
         Self {
+            singletons: RwLock::new(HashMap::new()),
             storages: RwLock::new(HashMap::new()),
             //inserters: RwLock::new(HashMap::new()),
             alive: RwLock::new(Vec::new()),
@@ -96,7 +99,8 @@ impl DynamicWorld {
             static_type_ids: RwLock::new(HashMap::new()),
         }
     }
-
+    // Singleton stuff
+    
     // Destroys this jhon
     pub fn nuke_it() {
         println!("BOOOM")
@@ -116,7 +120,7 @@ impl DynamicWorld {
             + 'static,
     >(
         &self,
-    ) -> Option<Arc<RwLock<Box<dyn AnyComponentStore>>>> {
+    ) -> Option<Arc<RwLock<dyn AnyComponentStore>>> {
         //self.storages.read().unwrap().get(&T::ID).cloned()
         self.storages.read().unwrap().get(&T::ID).cloned()
     }
@@ -218,7 +222,7 @@ impl DynamicWorld {
             .write()
             .unwrap()
             .entry(T::ID)
-            .or_insert_with(|| Arc::new(RwLock::new(Box::new(ComponentStore::<T>::new(T::ID)))));
+            .or_insert_with(|| Arc::new(RwLock::new(ComponentStore::<T>::new(T::ID))));
 
         // // Capture the concrete type at registration time
         // self.inserters

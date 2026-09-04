@@ -39,7 +39,7 @@ fn serialize_world(world: &Arc<DynamicWorld>) -> SerializedWorld {
         let read_store = store.read().unwrap();
         
         for e in 0..entity_count {
-            if let Some(component_json) = read_store.serialize_component(e) {
+            if let Some(component_json) = read_store.serialize(e) {
                 entity_store_count += 1;
                 
                 component_defs
