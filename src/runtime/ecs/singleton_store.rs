@@ -41,10 +41,12 @@ impl<T: StableTypeID
     pub fn set(&mut self, component: Option<T>) {
         self.component = component;
     }
-    pub fn get(&self) -> Option<&T> {
+    pub fn get(&self) -> &Option<T> {
         &self.component
     }
-    pub fn get_mut(&mut self) -> Option<&m>
+    pub fn get_mut(&mut self) -> &Option<T> {
+        &mut self.component
+    }
     // pub fn set(&mut self, component_id: ComponentID, component: T) {
         
     // }
