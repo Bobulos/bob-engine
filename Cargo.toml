@@ -36,3 +36,4 @@ u4 = "0.1.2"
 fixed_str = { version = "0.9.1", features = ["serde"]}
 with = "0.0.0"
 serde_with = "3.22.0"
+rustc-hash = "2.1.3"

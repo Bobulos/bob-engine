@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use wgpu::wgc::id;
 use crate::StableTypeID;
 use crate::runtime::ecs::component_store::AnyComponentStore;
 use crate::runtime::ecs::component_store::ComponentStore;
@@ -8,17 +9,18 @@ use crate::runtime::ecs::{SingletonStore, AnySingletonStore};
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use rustc_hash::FxHashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Entity(pub usize);
 type ComponentID = u64;
 
 pub struct DynamicWorld {
-    pub singletons: RwLock<HashMap<ComponentID, Arc<RwLock<dyn AnySingletonStore>>>>,
-    pub storages: RwLock<HashMap<ComponentID, Arc<RwLock<dyn AnyComponentStore>>>>,
+    pub singletons: RwLock<FxHashMap<ComponentID, Arc<RwLock<dyn AnySingletonStore>>>>,
+    pub storages: RwLock<FxHashMap<ComponentID, Arc<RwLock<dyn AnyComponentStore>>>>,
     alive: RwLock<Vec<bool>>,
     pub entities_count: RwLock<usize>,
     // Static stuff to runtime stuff
-    static_type_ids: RwLock<HashMap<ComponentID, TypeId>>,
+    static_type_ids: RwLock<FxHashMap<ComponentID, TypeId>>,
 }
 
 macro_rules! impl_for_each {
@@ -91,12 +93,12 @@ macro_rules! impl_for_each_mut {
 impl DynamicWorld {
     pub fn new() -> Self {
         Self {
-            singletons: RwLock::new(HashMap::new()),
-            storages: RwLock::new(HashMap::new()),
+            singletons: RwLock::new(FxHashMap::default()),
+            storages: RwLock::new(FxHashMap::default()),
             //inserters: RwLock::new(HashMap::new()),
             alive: RwLock::new(Vec::new()),
             entities_count: RwLock::new(0),
-            static_type_ids: RwLock::new(HashMap::new()),
+            static_type_ids: RwLock::new(FxHashMap::default()),
         }
     }
     // Singleton stuff
@@ -197,8 +199,20 @@ impl DynamicWorld {
     }
     
     // singleton crud
-    pub fn create_singleton(&mut self, component: ComponentID, value: Arc<RwLock<dyn AnySingletonStore>>) {
-        self.singletons.write().unwrap().insert(component, value);
+    pub fn create_singleton<T:  
+        StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static>(&self, component: T) 
+    {
+        let id = T::ID;
+        self.singletons.write().unwrap().insert(id, Arc::new(RwLock::new(SingletonStore::new(id, component))));
     }
     pub fn destroy_singleton<T: 
         StableTypeID
@@ -210,10 +224,28 @@ impl DynamicWorld {
         + Clone
         + Serialize
         + Deserialize<'static>
-        + 'static,>(&self, component: T) 
+        + 'static,>(&self) 
     {
-        self.singletons.write().unwrap().remove(&component.as_any().type_id());
+        self.singletons.write().unwrap().remove(&T::ID);
     }
+
+    /// Functionally the same as create singleton for now
+    pub fn set_singleton<T:
+        StableTypeID
+        + Default
+        + Any
+        + Send
+        + Sync
+        + Copy
+        + Clone
+        + Serialize
+        + Deserialize<'static>
+        + 'static>(&self, component: T)
+    {
+        let id = T::ID;
+        self.singletons.write().unwrap().insert(id, Arc::new(RwLock::new(SingletonStore::new(id, component))));
+    }
+    /// returns by value
     pub fn get_singleton<T: 
         StableTypeID
         + Default
@@ -224,19 +256,46 @@ impl DynamicWorld {
         + Clone
         + Serialize
         + Deserialize<'static>
-        + 'static>(&self, component: T) -> Option<T>
+        + 'static>(&self) -> T
     {
-        let s_lock = self.singletons.read();
-        let f_stor = s_lock.unwrap().get(&T::ID);
+        let f = self.singletons
+            .read()
+            .unwrap()
+            .get(&T::ID)
+            .as_ref()
+            .unwrap()
+            .read()
+            .unwrap()
+            .as_any()
+            .downcast_ref::<SingletonStore<T>>()
+            .expect("singleton unwrap fails")
+            .get();
+        f
+        // let singletons_read = match self.singletons.read() {
+        //     Ok(guard) => guard,
+        //     // If reading fails, cannot proceed. Return None instead of panicking.
+        //     Err(_) => return None, 
+        // };
         
-        if let Some(u_stor) = f_stor {
-            let v = u_stor.read().unwrap();
-            let stor = v.as_any().downcast_ref::<SingletonStore<T>>().unwrap();
-            let f_s = stor.get();
-        }
+        // let typed_box_opt = singletons_read.get(&T::ID);
         
-        None
+        // let Some(typed_box) = typed_box_opt else {
+        //     return None;
+        // };
+    
+        // let v = match typed_box.read() {
+        //     Ok(guard) => guard,
+        //     Err(_) => return None, // If reading the inner lock fails
+        // };
+    
+        // let stor = v.as_any().downcast_ref::<SingletonStore<T>>().unwrap() else {
+        //     // If downcasting fails, the stored type is incorrect.
+        //     return None;
+        // };
+    
+        // self.singletons.read().unwrap().get(&T::ID).unwrap().read().unwrap()
     }
+
     
     // Component CRUD
 

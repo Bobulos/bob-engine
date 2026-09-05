@@ -17,7 +17,7 @@ pub struct SingletonStore<T: StableTypeID
     component_ids: ComponentID,
 
     /// None if dead
-    component: Option<T>,
+    component: T,
 }
 
 impl<T: StableTypeID
@@ -34,19 +34,19 @@ impl<T: StableTypeID
     pub fn new(component_id: ComponentID, component: T) -> Self {
         Self {
             component_ids: component_id,
-            component: Some(component),
+            component: component,
         }
     }
 
-    pub fn set(&mut self, component: Option<T>) {
+    pub fn set(&mut self, component: T) {
         self.component = component;
     }
-    pub fn get(&self) -> &Option<T> {
-        &self.component
+    pub fn get(&self) -> T {
+        self.component
     }
-    pub fn get_mut(&mut self) -> &Option<T> {
-        &mut self.component
-    }
+    // pub fn get_mut(&mut self) -> Option<T> {
+    //     self.component
+    // }
     // pub fn set(&mut self, component_id: ComponentID, component: T) {
         
     // }
