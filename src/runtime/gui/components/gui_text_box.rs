@@ -25,7 +25,7 @@ pub struct GuiTextBox {
 impl GuiTextBox {
     pub fn new(text: String, font_binding: FontSheetBinding, font_size: f32) -> Self {
         debug_assert!(text.len() < MAX_TEXT_LENGTH, "text length must be less than {} characters", MAX_TEXT_LENGTH);
-        let packed = font_binder::str_to_packed_text::<MAX_TEXT_LENGTH>(&text, font_binder::FontSheetBinding::NonStandardTestPallate);
+        let packed = font_binder::str_to_packed_text::<MAX_TEXT_LENGTH>(&text, font_binding);
         Self {
             dirty: true,
             visible: true,

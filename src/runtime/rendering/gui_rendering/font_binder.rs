@@ -19,7 +19,7 @@ use super::PackedText;
 pub enum FontSheetBinding {
     #[default]
     NonStandardTestPallate,
-    StandardASCII
+    Standard16Collum
     // 600 X 240
     // 15 X 6
     // A B C D E F G H I J K L M
@@ -33,7 +33,7 @@ pub enum FontSheetBinding {
 
 pub fn get_uv_scale(binding: FontSheetBinding) -> [f32; 2] {
     let d = get_dimensions(binding);
-    [1.0/d[0], 1.0/d[1]]
+    [1.0 / d[0], 1.0 / d[1]]
 }
 pub fn get_uv_offset(binding: FontSheetBinding, c: &u8, dimensions: [f32; 2]) -> [f32; 2] {
     let c = U4x2::from_ref(c).unpack(); 
@@ -46,7 +46,7 @@ pub fn get_uv_offset(binding: FontSheetBinding, c: &u8, dimensions: [f32; 2]) ->
 pub fn get_dimensions(binding: FontSheetBinding) -> [f32; 2] {
     match binding {
         FontSheetBinding::NonStandardTestPallate => [15.0, 6.0],
-        FontSheetBinding::StandardASCII => [16.0, 16.0],
+        FontSheetBinding::Standard16Collum => [16.0, 6.0],
     }
 }
 pub fn str_to_packed_text<const MAX_TEXT_LENGTH :usize>(text: &str, binding: FontSheetBinding) -> PackedText<MAX_TEXT_LENGTH> {
@@ -60,6 +60,7 @@ pub fn str_to_packed_text<const MAX_TEXT_LENGTH :usize>(text: &str, binding: Fon
 }
 fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
     let mut bind: [u8; 2] = [0, 0];
+    
     match font_sheet_format {
         FontSheetBinding::NonStandardTestPallate => {
             let c = c.to_ascii_lowercase();
@@ -140,8 +141,14 @@ fn get_pos_from_char(c: char, font_sheet_format: &FontSheetBinding) -> U4x2 {
                 _ =>  [0,0]
             };
         }
-        FontSheetBinding::StandardASCII => {
-            panic!("NOT IMPLEMENTED STANDARD ASCII")
+        FontSheetBinding::Standard16Collum => {
+            
+            let index = (c as u8);
+            let x = index % 16;
+            let y = index / 16;
+            
+            bind = [x, y - 2];
+            //println!("Found bind {} {}", x, y)
         }
     };
     
