@@ -10,6 +10,7 @@ pub struct GuiCharInstance {
     pub size: [f32; 2],
     pub uv_offset: [f32; 2],
     pub uv_scale: [f32; 2],
+    pub color: [f32; 4],
     // mabeye add rot later
 }
 impl Default for GuiCharInstance {
@@ -18,7 +19,8 @@ impl Default for GuiCharInstance {
             position: [f32::MAX, f32::MAX], 
             size: [1.0, 1.0], 
             uv_offset: [0.0, 0.0], 
-            uv_scale: [1.0, 1.0] 
+            uv_scale: [1.0, 1.0],
+            color: [1.0; 4],
         }   
     }
 }
@@ -52,6 +54,12 @@ impl VertexLayout for GuiCharInstance {
                     shader_location: 5,
                     format: wgpu::VertexFormat::Float32x2,
                 },
+                // i_color: @location(6)
+                wgpu::VertexAttribute {
+                    offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x4,
+                }
             ],
         }
     }

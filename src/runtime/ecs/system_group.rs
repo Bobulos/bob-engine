@@ -104,7 +104,7 @@ impl SystemGroup {
             for system in systems.iter_mut() {
                 system.on_update(&world);
             }
-        });
+        }).join();
     }
 }
 

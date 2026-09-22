@@ -25,8 +25,8 @@ pub const MAIN_WORLD: &str = "main";
 pub const RENDER_GROUP: &str = "render_group";
 pub const PHYSICS_GROUP: &str = "physics_group";
 pub const PHYSICS_CONNECTION_GROUP: &str = "physics_connection_group";
-pub const RENDER_BATCH_SIZE: usize = 1024 * 4; // 2^10
-pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
+// pub const RENDER_BATCH_SIZE: usize = 1024 * 4; // 2^10
+// pub const FIXED_DT: f32 = 1.0 / 60.0; // 2^14
 // pub const INCLUDE_ATLAS: &[&str] = &[
 //     "tree.png",
 //     "Tux.png",
@@ -137,7 +137,7 @@ impl Engine {
     pub fn run(&mut self) {
         self.frame_count += 1;
 
-        let target_frame_time = Duration::from_secs_f64(1.0 / 60.0);
+        let target_frame_time = Duration::from_secs_f64(crate::constants::FIXED_DT as f64);
         let frame_start = Instant::now();
         self.update();
         self.render().expect("Renderer fatal error");

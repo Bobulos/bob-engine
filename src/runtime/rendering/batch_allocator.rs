@@ -48,15 +48,15 @@ impl BatchAllocator {
         let mut renderer_lock = self.renderer.write().unwrap();
         match pipeline_key {
             PipelineKey::GuiShape => {
-                let instances = vec![GuiShapeInstance::default(); runtime::engine::RENDER_BATCH_SIZE];
+                let instances = vec![GuiShapeInstance::default(); MAX_PER_BATCH];
                 renderer_lock.create_batch(asset_handle, &instances, pipeline_key)
             }
             PipelineKey::GuiText => {
-                let instances = vec![GuiCharInstance::default(); runtime::engine::RENDER_BATCH_SIZE];
+                let instances = vec![GuiCharInstance::default(); MAX_PER_BATCH];
                 renderer_lock.create_batch(asset_handle, &instances, pipeline_key)
             }
             _ => {
-                let instances = vec![SpriteInstance::default(); runtime::engine::RENDER_BATCH_SIZE];
+                let instances = vec![SpriteInstance::default(); MAX_PER_BATCH];
                 renderer_lock.create_batch(asset_handle, &instances, pipeline_key)
             }
         }

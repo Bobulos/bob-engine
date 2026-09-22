@@ -23,7 +23,7 @@ pub trait StableTypeID {
 extern crate macro_rules_attribute;
 
 derive_alias! {
-    #[derive(Component!)] = #[derive(Clone, Default, component::StableID, Copy, serde::Serialize, serde::Deserialize)];
+    #[derive(Component!)] = #[derive(Clone, Default, component::StableID, Copy, serde::Serialize, serde::Deserialize, rhai::CustomType)];
 }
 
 derive_alias! {

@@ -5,10 +5,11 @@
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>,
+    @location(1) color: vec4<f32>,
 };
 
 
-// v for vertex i for instance
+// v for vertex i for instances 
 @vertex
 fn vs_main(
     @location(0) v_pos: vec2<f32>,
@@ -18,12 +19,14 @@ fn vs_main(
     @location(3) i_size: vec2<f32>,
     @location(4) i_uv_offset: vec2<f32>,
     @location(5) i_uv_scale: vec2<f32>,
+    @location(6) i_color: vec4<f32>,
 ) -> VertexOutput {
     var out: VertexOutput;
 
     let scaled = v_pos * i_size;
     let world_pos = i_pos + scaled;
 
+    out.color = i_color;
     out.clip_position = camera * vec4<f32>(world_pos, 0.0, 1.0);
 
     // Flip the texture horizontally (across the Y axis).
@@ -37,5 +40,5 @@ fn vs_main(
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    return textureSample(t_diffuse, s_diffuse, in.tex_coords) * in.color;
 }

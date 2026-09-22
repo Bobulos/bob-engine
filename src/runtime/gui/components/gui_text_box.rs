@@ -1,8 +1,6 @@
 use fixed_str::FixedStr;
-
-
-
 use crate::runtime::math::Float2;
+use crate::runtime::rendering::Color;
 use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::PackedText;
 use crate::runtime::rendering::gui_rendering::font_binder;
@@ -18,17 +16,21 @@ pub struct GuiTextBox {
     pub visible: bool,
     pub font_binding: FontSheetBinding,
     pub font_size: f32,
-    pub used_length: usize,
+    font_spaceing: f32,
+    pub color: Color,
+    used_length: usize,
     pub text: FixedStr<MAX_TEXT_LENGTH>,
-    pub packed_text: PackedText<MAX_TEXT_LENGTH>,
+    packed_text: PackedText<MAX_TEXT_LENGTH>,
 }
 impl GuiTextBox {
-    pub fn new(text: String, font_binding: FontSheetBinding, font_size: f32) -> Self {
+    pub fn new(text: String, font_binding: FontSheetBinding, font_size: f32, font_spaceing_frac: f32, color: Color) -> Self {
         debug_assert!(text.len() < MAX_TEXT_LENGTH, "text length must be less than {} characters", MAX_TEXT_LENGTH);
         let packed = font_binder::str_to_packed_text::<MAX_TEXT_LENGTH>(&text, font_binding);
         Self {
             dirty: true,
             visible: true,
+            color,
+            font_spaceing: font_spaceing_frac * font_size,
             used_length: text.len() - 1,
             font_binding,
             font_size,
@@ -55,13 +57,14 @@ impl GuiTextBox {
                 continue;
             }
             let w_pos = Float2::new(x_cursor, y_cursor);
-            x_cursor += self.font_size;
+            x_cursor += self.font_spaceing;
 
             let uv_offset: [f32; 2] = font_binder::get_uv_offset(self.font_binding, c_packed, dimensions);
             
             instances[i] = GuiCharInstance { 
                 position: w_pos.into(), 
                 size: [self.font_size; 2],  
+                color: self.color.value,
                 uv_offset, 
                 uv_scale 
             };
