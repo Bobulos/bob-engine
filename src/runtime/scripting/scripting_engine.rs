@@ -1,26 +1,24 @@
-use rhai::{Engine, EvalAltResult};
-
+use rhai::{AST, Engine, ParseError, EvalAltResult};
 
 pub struct ScriptingEngine {
-    pub engine: Option<Engine>, 
+    engine: Engine,
+    // Stores the successfully compiled script content for retrieval/inspection
+    compiled_script: Option<String>,
 }
 /// Call this after exposing structs
 impl ScriptingEngine {
     pub fn new() -> Self {
-        Self { engine: None }
+        Self {
+            engine: Engine::new(),
+            compiled_script: None,
+        }
+    } 
+    pub fn include_script(script: String) -> Result {
+        
     }
-    pub fn initialize_scripting() -> Result<(), Box<EvalAltResult>> {
-        let mut engine = Engine::new();
-    
-        // engine.register_type_with_name::<TestStruct>("TestStruct")
-        //       .register_fn("new_ts", TestStruct::new)
-        //       .register_fn("update", TestStruct::update);
-    
-        // let result = engine.eval::<TestStruct>(
-        //     "let x = new_ts(); x.update(41); x"
-        // )?;
-    
-        println!("Result field: {}", result.field); // Prints 42
-        Ok(())
-    }   
+    fn compile_script_to_ast(&mut self, script: &str) ->  Result<AST, ParseError> {
+        self.compiled_script = Some(script.to_string());
+        let code = self.engine.compile(script);
+        code
+    }
 }

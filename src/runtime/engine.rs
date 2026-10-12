@@ -1,17 +1,12 @@
-use winit::window;
-
 use crate::runtime::input::{Input, KeyCode};
-use crate::runtime::assets::{AssetEmbedded, AssetStore, asset_store};
+use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
 use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
-use crate::runtime::rendering::{self, renderer};
-use crate::runtime::rendering::Renderer;
-use crate::include_asset;
+use crate::runtime::rendering::{self, Renderer};
 use std::sync::{Arc, OnceLock, RwLock};
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 pub struct Engine {
     pub frame_count: u64,
     pub renderer: Arc<RwLock<Renderer>>,
@@ -48,7 +43,7 @@ impl Engine {
         engine
     }
     pub fn init_ecs() {
-        
+
     }
     /// Takes an asset store as an argument allows you to specify which assets to include
     pub fn init(&mut self, asset_store: &mut AssetStore, renderer: Renderer) {
@@ -62,7 +57,7 @@ impl Engine {
             .write()
             .unwrap()
             .init(self.asset_store.clone());
-        
+
         self.init_renderer();
 
         self.init_systems();
