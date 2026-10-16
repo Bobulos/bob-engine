@@ -2,23 +2,37 @@ use rhai::{AST, Engine, ParseError, EvalAltResult};
 
 pub struct ScriptingEngine {
     engine: Engine,
-    // Stores the successfully compiled script content for retrieval/inspection
-    compiled_script: Option<String>,
+    compiled_scripts: Vec<AST>,
 }
-/// Call this after exposing structs
+
 impl ScriptingEngine {
     pub fn new() -> Self {
         Self {
             engine: Engine::new(),
-            compiled_script: None,
+            compiled_scripts: Vec::new(),
         }
-    } 
-    pub fn include_script(script: String) -> Result {
-        
     }
-    fn compile_script_to_ast(&mut self, script: &str) ->  Result<AST, ParseError> {
-        self.compiled_script = Some(script.to_string());
-        let code = self.engine.compile(script);
-        code
+
+    pub fn evaluate_ast(
+        &self,
+        ast: &AST,
+    ) -> Result<(), Box<EvalAltResult>> {
+        self.engine.eval_ast::<()> (ast)
+    }
+
+    pub fn include_script(
+        &mut self,
+        script: String,
+    ) -> Result<(), ParseError> {
+        let ast = self.compile_script_to_ast(&script)?;
+        self.compiled_scripts.push(ast);
+        Ok(())
+    }
+
+    fn compile_script_to_ast(
+        &self,
+        script: &str,
+    ) -> Result<AST, ParseError> {
+        self.engine.compile(script)
     }
 }
