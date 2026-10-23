@@ -1,3 +1,4 @@
+use crate::runtime::engine;
 use crate::runtime::input::{Input, KeyCode};
 use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
@@ -5,15 +6,19 @@ use crate::runtime::ecs::SystemGroup;
 use crate::runtime::ecs::entities::Entities;
 use crate::runtime::ecs::system_group::SystemGroupThreading;
 use crate::runtime::rendering::{self, Renderer};
+use crate::runtime::scripting::scripting_engine::ScriptingEngine;
 use std::sync::{Arc, OnceLock, RwLock};
 use std::time::{Duration, Instant};
-pub struct Engine {
+
+pub struct Engine<'scr> {
     pub frame_count: u64,
     pub renderer: Arc<RwLock<Renderer>>,
     pub input: Arc<RwLock<Input>>,
     pub entities: Entities,
     // Assets
     pub asset_store: Arc<OnceLock<AssetStore>>,
+    // Scripts
+    scripting_engine: Option<ScriptingEngine<'scr>>
 }
 
 pub const MAIN_WORLD: &str = "main";
@@ -28,7 +33,7 @@ pub const PHYSICS_CONNECTION_GROUP: &str = "physics_connection_group";
 //     "exp/ship_parts_s.png",
 //     "exp/projectiles_m.png",
 // ];
-impl Engine {
+impl<'scr> Engine <'scr>{
     pub fn new() -> Self {
         let mut engine: Engine = Engine {
             frame_count: 0,
@@ -36,6 +41,7 @@ impl Engine {
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
             asset_store: Arc::new(OnceLock::new()),
+            scripting_engine: None,
         };
         // This is here to initialize the world so the user can add stuff too it
         engine.init_world();
@@ -45,6 +51,8 @@ impl Engine {
     pub fn init_ecs() {
 
     }
+    // Init Region
+    
     /// Takes an asset store as an argument allows you to specify which assets to include
     pub fn init(&mut self, asset_store: &mut AssetStore, renderer: Renderer) {
         // let mut asset_store = AssetStore::new();
@@ -79,11 +87,9 @@ impl Engine {
         self.init_sprites();
         self.init_tilemap();
     }
-
     fn init_sprites(&mut self) {
         let _world = self.entities.get_world(MAIN_WORLD).unwrap();
     }
-
     fn init_tilemap(&mut self) {
         let tilemap = [0u8; 64 * 64];
         let file = AssetEmbedded::get("grass.png").unwrap();
@@ -118,7 +124,6 @@ impl Engine {
         let queue = renderer.queue();
         renderer.tilemaps[trees].flush_position(queue);
     }
-
     fn init_systems(&mut self) {
         println!("Initializing system groups and components");
 
@@ -128,7 +133,27 @@ impl Engine {
         // initialize them jhons
         self.entities.start_system_groups();
     }
+    
+    pub fn try_include_script(&mut self) {
+        match self.scripting_engine {
+            Some(ref engine) => {
+                
+            }
+            None => {
+                
+            }
+        }
+    }
+    // End Init
 
+    // Scripting engine
+    // You include scripts before you boot up the app
+    // pub fn include_script(&self, script: String) {
+    // }
+    // pub fn include_script_from_path_runtime(&self, path: String) {
+        
+    // }  
+    //
     pub fn run(&mut self) {
         self.frame_count += 1;
 
@@ -155,6 +180,8 @@ impl Engine {
         }
     }
     const CAMERA_SPEED: f32 = 0.1;
+
+    // This needs to go remove
     pub fn player_loop(&mut self) {
         let mut input = self.input.write().unwrap();
         if input.get_key_down(KeyCode::KeyA) {
@@ -204,6 +231,7 @@ impl Engine {
         //println!("cam pos {},{}", world_camera_pos[0], world_camera_pos[1]);
         input.mouse_world_position = world_camera_pos.into();
     }
+    
     pub fn update(&mut self) {
         self.update_entities();
 

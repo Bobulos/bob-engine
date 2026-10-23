@@ -26,11 +26,11 @@ pub struct PipelineConfig<'a> {
     // extend later: depth_stencil, primitive, etc.
 }
 // Renderer
-pub struct PipelineEntry {
-    pipeline: wgpu::RenderPipeline,
-    // stride used when this pipeline was built — for validation
-    instance_stride: usize,
-}
+// pub struct PipelineEntry {
+//     pipeline: wgpu::RenderPipeline,
+//     // stride used when this pipeline was built — for validation
+//     instance_stride: usize,
+// }
 
 pub struct Renderer {
     // wgpu core
