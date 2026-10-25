@@ -12,10 +12,10 @@ use winit::event::ElementState;
 
 
 pub static GLOBAL_APP_CONTEXT: std::sync::OnceLock<AppContext> = std::sync::OnceLock::new();
-pub struct App {
+pub struct App<'a> {
     context: AppContext,
     window: Option<Arc<Window>>,
-    engine: Engine,
+    engine: Engine<'a>,
     included_assets: AssetStore,
 }
 
@@ -28,8 +28,8 @@ pub struct App {
 //         }
 //     }
 // }
-impl App {
-    pub fn new(engine: Engine, context: AppContext, included_assets: AssetStore) -> Self {
+impl<'e> App <'e>{
+    pub fn new(engine: Engine<'e>, context: AppContext, included_assets: AssetStore) -> Self {
         // Realy should use a lazy lock but this is the only write ig its fine
         GLOBAL_APP_CONTEXT.set(context.clone()).unwrap();
        
@@ -51,7 +51,7 @@ impl App {
         println!("Initialization Success");
     }
 }
-impl ApplicationHandler for App {
+impl<'e> ApplicationHandler for App<'e> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window.is_none() {
             // Create window attributes required
