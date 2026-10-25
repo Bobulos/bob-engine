@@ -29,9 +29,9 @@ impl SystemBase for GuiShapeRenderSystem {
             |_entity, shape, transform, batch_handle| {
                 if batch_handle.index != usize::MAX && shape.visible {
 
-                    if !shape.dirty {
-                        return;
-                    }
+                    // if !shape.dirty {
+                    //     return;
+                    // }
                     shape.dirty = false;
                     
                     let batch = &mut renderer_lock.batches[batch_handle.batch_index];
