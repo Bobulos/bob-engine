@@ -1,18 +1,19 @@
 use std::{collections::HashMap, str, sync::Arc};
-
-use crate::runtime::ecs::{DynamicWorld, SystemGroup};
+use rustc_hash::FxHashMap;
+use crate::runtime::ecs::{DynamicWorld, SystemGroup, Template};
 
 /// This is a wrapper for the world and system groups held by the engine
 pub struct Entities {
-    pub worlds: HashMap<&'static str, Arc<DynamicWorld>>,
-    /// Maximum of 16 system groups
-    pub system_groups: HashMap<&'static str, SystemGroup>,
+    pub templates: FxHashMap<&'static str, Arc<dyn Template>>,
+    pub worlds: FxHashMap<&'static str, Arc<DynamicWorld>>,
+    pub system_groups: FxHashMap<&'static str, SystemGroup>,
 }
 impl Entities {
     pub fn new() -> Self {
         Self {
-            worlds: HashMap::new(),
-            system_groups: HashMap::new(),
+            templates: FxHashMap::default(),
+            worlds: FxHashMap::default(),
+            system_groups: FxHashMap::default(),
         }
     }
     pub fn start_system_groups(&mut self) {

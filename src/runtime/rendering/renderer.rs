@@ -43,7 +43,7 @@ pub struct Renderer {
 
     // pipeline
     bind_group_layout: Option<wgpu::BindGroupLayout>,
-    
+
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 
     // shared geometry
@@ -98,14 +98,14 @@ impl Renderer {
         }
     }
 
-    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline { 
+    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline {
         let shader = self
             .device()
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: None,
                 source: wgpu::ShaderSource::Wgsl(config.shader_source.into()),
             });
-    
+
         let layout = self
             .device()
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -113,7 +113,7 @@ impl Renderer {
                 bind_group_layouts: &[Some(self.bind_group_layout.as_ref().unwrap())],
                 immediate_size: 0,
             });
-    
+
         self.device()
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
@@ -184,7 +184,7 @@ impl Renderer {
         self.camera.viewport_width = width;
         self.camera.viewport_height = height;
         self.update_camera();
-        
+
         self.msaa_texture = Some(self.create_msaa_texture());
     }
 
@@ -247,16 +247,16 @@ impl Renderer {
             .data
             .as_ref()
             .unwrap();
-    
+
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
-    
+
         let raw: Vec<u8> = bytemuck::cast_slice(instances).to_vec();
         let stride = std::mem::size_of::<I>();
-    
+
         let instance_buffer = self.create_instance_buffer_raw(&raw, instances.len());
         let bind_group = self.create_bind_group(&tex, &pipeline_key);
-    
+
         self.batches.push(Batch {
             pipeline_key,
             bind_group,
@@ -269,7 +269,7 @@ impl Renderer {
         });
         self.batches.len() - 1
     }
-   
+
     fn create_instance_buffer_raw(&self, data: &[u8], count: usize) -> wgpu::Buffer {
         let capacity = (count * 2).max(1);
         let stride = if count > 0 { data.len() / count } else { 1 };
@@ -340,7 +340,7 @@ impl Renderer {
         })
         .create_view(&wgpu::TextureViewDescriptor::default())
     }
-     
+
 
     /// KILLL at index and replace with new batch.
     // pub fn replace_batch(
@@ -555,7 +555,7 @@ impl Renderer {
 
         self.bind_group_layout = Some(bind_group_layout);
         self.register_pipeline_keys();
-        
+
     }
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
@@ -575,17 +575,17 @@ impl Renderer {
         );
         // gui
         self.register_pipeline::<GuiShapeInstance>(
-            PipelineKey::GuiShape, 
+            PipelineKey::GuiShape,
             PipelineConfig {
                 shader_source: include_str!("shaders/gui_shape.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
         self.register_pipeline::<GuiCharInstance>(
-            PipelineKey::GuiText, 
-            PipelineConfig { 
-                shader_source: include_str!("shaders/text.wgsl"), 
-                blend: wgpu::BlendState::ALPHA_BLENDING, 
+            PipelineKey::GuiText,
+            PipelineConfig {
+                shader_source: include_str!("shaders/text.wgsl"),
+                blend: wgpu::BlendState::ALPHA_BLENDING,
             }
         );
 
@@ -617,7 +617,7 @@ impl Renderer {
     // Batch helpers
 
     // I think this is no longer used
-    
+
     fn make_instance_buffer(&self, instances: &[SpriteInstance]) -> wgpu::Buffer {
         // Allocate 2x requested capacity so moderate growth avoids reallocation
         let capacity = (instances.len() * 2).max(1);
@@ -639,7 +639,7 @@ impl Renderer {
             PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
             _ => self.camera_buffer.as_ref().unwrap(),
         };
-    
+
         self.device().create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Batch Bind Group"),
             layout: self.bind_group_layout.as_ref().unwrap(),
@@ -660,7 +660,7 @@ impl Renderer {
         })
     }
     // need to destroy this
-    // Perframe helpers 
+    // Perframe helpers
     pub fn update_tilemap(
         &mut self,
         idx: usize,
@@ -681,17 +681,17 @@ impl Renderer {
             tile_size,
         );
     }
-    
+
     fn upload_instances(&mut self) {
         for batch in &mut self.batches {
-            // println!("batch stride {} capacity {}", 
+            // println!("batch stride {} capacity {}",
             //     batch.instance_stride, batch.instance_capacity);
             if batch.instances.is_empty() {
                 continue;
             }
-    
+
             let count = batch.instances.len() / batch.instance_stride;
-    
+
             if count > batch.instance_capacity {
                 let new_capacity = count * 2;
                 batch.instance_buffer =
@@ -703,7 +703,7 @@ impl Renderer {
                     });
                 batch.instance_capacity = new_capacity;
             }
-    
+
             batch.num_instances = count as u32;
             self.queue.as_ref().unwrap().write_buffer(
                 &batch.instance_buffer,
@@ -714,7 +714,7 @@ impl Renderer {
     }
     fn record_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         let msaa_view = self.msaa_texture.as_ref().expect("MSAA texture not initialized");
-        
+
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Main Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -728,20 +728,20 @@ impl Renderer {
             })],
             ..Default::default()
         });
-    
+
 
         // Migrate legacy tilemap to new solution
 
         // for tilemap in &self.tilemaps {
         //     tilemap.record(&mut rpass);
         // }
-    
+
         rpass.set_vertex_buffer(0, self.vertex_buffer.as_ref().unwrap().slice(..));
         rpass.set_index_buffer(
             self.index_buffer.as_ref().unwrap().slice(..),
             wgpu::IndexFormat::Uint16,
         );
-    
+
         for batch in &self.batches {
             if batch.num_instances == 0 {
                 continue;
@@ -756,7 +756,7 @@ impl Renderer {
             rpass.draw_indexed(0..self.num_indices, 0, 0..batch.num_instances);
         }
     }
-    
+
     // Convenience accessors
     fn device(&self) -> &wgpu::Device {
         // if let Some(device) = self.device.as_ref() {
@@ -794,8 +794,8 @@ impl Renderer {
 //         primitive: wgpu::PrimitiveState::default(),
 //         depth_stencil: None,
 //         multisample: wgpu::MultisampleState {
-//             count: 4, 
-//             mask: !0, 
+//             count: 4,
+//             mask: !0,
 //             alpha_to_coverage_enabled: false,
 //         },
 //         multiview_mask: None,

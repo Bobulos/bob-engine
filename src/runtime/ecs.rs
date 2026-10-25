@@ -8,7 +8,9 @@ pub mod system_bootstrap;
 pub mod system_group;
 pub mod entity_change_buffer;
 pub mod singleton_store;
+pub mod template;
 
+pub use template::Template;
 pub use singleton_store::{SingletonStore, AnySingletonStore};
 pub use dynamic_world::{DynamicWorld, Entity};
 pub use entity_change_buffer::EntityChangeBuffer;
