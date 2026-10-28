@@ -3,8 +3,10 @@
 pub enum PipelineKey {
     /// Standard alpha-blended sprite shader.
     Sprite,
+    /// Tilemap
+    Tilemap,
     /// Additive blending good for particles, glows, fire.
-    Additive,
+    SpriteAdditive,
     /// Screen space ui
     GuiShape,
     GuiText,

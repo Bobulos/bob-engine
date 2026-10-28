@@ -1,4 +1,5 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
+use crate::runtime::rendering::tilemap_rendering::TilemapInstance;
 use crate::runtime::gui::components::GuiTextBox;
 use crate::runtime::rendering;
 use crate::runtime::rendering::camera::Camera;
@@ -557,6 +558,7 @@ impl Renderer {
         self.register_pipeline_keys();
 
     }
+
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
         self.register_pipeline::<SpriteInstance>(
@@ -566,8 +568,13 @@ impl Renderer {
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
+        self.register_pipeline::<TilemapInstance>(
+            PipelineKey::Tilemap, PipelineConfig { 
+                shader_source: "shaders/tilemap.wgsl", 
+                blend: wgpu::BlendState::ALPHA_BLENDING,
+            });
         self.register_pipeline::<SpriteInstance>(
-            PipelineKey::Additive,
+            PipelineKey::SpriteAdditive,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,

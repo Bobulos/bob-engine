@@ -173,7 +173,7 @@ impl TilemapRenderer {
         let atlas_rows = tex.texture.height() / tile_size;
         let atlas_uvs = TileUV::generate_atlas(atlas_cols, atlas_rows);
 
-        // UV buffer — always recreate (atlas layout may have changed)
+        // UV buffer always recreate (atlas layout may have changed)
         self.tile_uv_buffer = Some(
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Tile UV Buffer"),
@@ -182,7 +182,7 @@ impl TilemapRenderer {
             }),
         );
 
-        // Info buffer — write_buffer if it exists, create if not
+        // Info buffer write_buffer if it exists, create if not
         let info = TilemapInfo {
             width,
             height,
