@@ -1,7 +1,7 @@
-use crate::runtime::rendering::VertexLayout;
-use wgpu::VertexFormat::*;
-use wgpu::VertexAttribute;
+use crate::runtime::rendering::InstanceLayout;
 use std::mem::size_of;
+use wgpu::VertexAttribute;
+use wgpu::VertexFormat::*;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable, Debug)]
@@ -15,20 +15,20 @@ pub struct GuiCharInstance {
 }
 impl Default for GuiCharInstance {
     fn default() -> Self {
-        Self { 
-            position: [f32::MAX, f32::MAX], 
-            size: [1.0, 1.0], 
-            uv_offset: [0.0, 0.0], 
+        Self {
+            position: [f32::MAX, f32::MAX],
+            size: [1.0, 1.0],
+            uv_offset: [0.0, 0.0],
             uv_scale: [1.0, 1.0],
             color: [1.0; 4],
-        }   
+        }
     }
 }
-impl VertexLayout for GuiCharInstance {
+impl InstanceLayout for GuiCharInstance {
     fn layout() -> wgpu::VertexBufferLayout<'static> {
-        wgpu::VertexBufferLayout { 
-            array_stride: size_of::<GuiCharInstance>() as u64, 
-            step_mode: wgpu::VertexStepMode::Instance, 
+        wgpu::VertexBufferLayout {
+            array_stride: size_of::<GuiCharInstance>() as u64,
+            step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
                 // i_pos: @location(2)
                 wgpu::VertexAttribute {
@@ -59,7 +59,7 @@ impl VertexLayout for GuiCharInstance {
                     offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
                     shader_location: 6,
                     format: wgpu::VertexFormat::Float32x4,
-                }
+                },
             ],
         }
     }

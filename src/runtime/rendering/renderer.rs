@@ -1,14 +1,14 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering::tilemap_rendering::TilemapInstance;
 use crate::runtime::gui::components::GuiTextBox;
-use crate::runtime::rendering;
+use crate::runtime::rendering::{self, InstanceBindGroupLayout, InstanceLayout};
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
-use crate::runtime::rendering::VertexLayout;
+use crate::runtime::rendering::InstanceVertexLayout;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -43,7 +43,8 @@ pub struct Renderer {
     config: Option<wgpu::SurfaceConfiguration>,
 
     // pipeline
-    bind_group_layout: Option<wgpu::BindGroupLayout>,
+    // Kill this shunt it to the instances
+    // bind_group_layout: Option<wgpu::BindGroupLayout>,
 
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
 
@@ -84,7 +85,6 @@ impl Renderer {
             device: None,
             queue: None,
             config: None,
-            bind_group_layout: None,
             vertex_buffer: None,
             index_buffer: None,
             num_indices: 0,
@@ -99,7 +99,11 @@ impl Renderer {
         }
     }
 
-    fn build_pipeline(&self, config: &PipelineConfig, instance_layout: wgpu::VertexBufferLayout) -> wgpu::RenderPipeline {
+    fn build_pipeline(&self, 
+        config: &PipelineConfig, 
+        instance_bgl: wgpu::BindGroupLayout, 
+        instance_vl: wgpu::VertexBufferLayout
+    ) -> wgpu::RenderPipeline {
         let shader = self
             .device()
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -111,7 +115,7 @@ impl Renderer {
             .device()
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: None,
-                bind_group_layouts: &[Some(self.bind_group_layout.as_ref().unwrap())],
+                bind_group_layouts: &[Some(&instance_bgl)],
                 immediate_size: 0,
             });
 
@@ -122,7 +126,7 @@ impl Renderer {
                 vertex: wgpu::VertexState {
                     module: &shader,
                     entry_point: Some("vs_main"),
-                    buffers: &[Vertex::layout(), instance_layout],
+                    buffers: &[Vertex::layout(), instance_vl],
                     compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
@@ -147,12 +151,12 @@ impl Renderer {
             })
     }
     /// Register a built-in or custom pipeline at any time.
-    pub fn register_pipeline<I: VertexLayout>(
+    pub fn register_pipeline<B: InstanceBindGroupLayout, I: InstanceVertexLayout>(
         &mut self,
         key: PipelineKey,
         config: PipelineConfig,
     ) {
-        let pipeline = self.build_pipeline(&config, I::layout());
+        let pipeline = self.build_pipeline(&config, B::layout(), I::layout());
         self.pipelines.insert(key, pipeline);
     }
     // Public API
@@ -231,7 +235,7 @@ impl Renderer {
     }
     /// Creates a new batch from an asset handle and an initial instance list.
     /// Returns the batch index for later access via `renderer.batches[idx]`.
-    pub fn create_batch<I: bytemuck::Pod + VertexLayout>(
+    pub fn create_batch<I: bytemuck::Pod + InstanceLayout>(
         &mut self,
         asset_handle: AssetHandle,
         instances: &[I],
@@ -256,7 +260,9 @@ impl Renderer {
         let stride = std::mem::size_of::<I>();
 
         let instance_buffer = self.create_instance_buffer_raw(&raw, instances.len());
-        let bind_group = self.create_bind_group(&tex, &pipeline_key);
+        let bind_group = self.create_default_bind_group(&tex, &pipeline_key);
+        
+        let bind_group = I::bind_group_layout();
 
         self.batches.push(Batch {
             pipeline_key,
@@ -372,7 +378,7 @@ impl Renderer {
     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
-        let bind_group = self.create_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
+        let bind_group = self.create_default_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
 
         let batch = &mut self.batches[batch_idx];
         batch.bind_group = bind_group;
@@ -434,45 +440,45 @@ impl Renderer {
         self.queue = Some(queue);
     }
 
-    fn init_geometry(&mut self) {
-        let vertices = [
-            Vertex {
-                position: [-0.5, 0.5],
-                tex_coords: [0.0, 0.0],
-            }, // top-left
-            Vertex {
-                position: [-0.5, -0.5],
-                tex_coords: [0.0, 1.0],
-            }, // bottom-left
-            Vertex {
-                position: [0.5, -0.5],
-                tex_coords: [1.0, 1.0],
-            }, // bottom-right
-            Vertex {
-                position: [0.5, 0.5],
-                tex_coords: [1.0, 0.0],
-            }, // top-right
-        ];
-        let indices: &[u16] = &[0, 1, 2, 0, 2, 3];
-        self.num_indices = indices.len() as u32;
-
-        self.vertex_buffer = Some(self.device().create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(&vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            },
-        ));
-
-        self.index_buffer = Some(self.device().create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(indices),
-                usage: wgpu::BufferUsages::INDEX,
-            },
-        ));
-    }
-
+//     fn inir_geometry(&mut self) {
+//         let vertices = [
+//             Vertex {
+//                 position: [-0.5, 0.5],
+//                 tex_coords: [0.0, 0.0],
+//             }, // top-left
+//             Vertex {
+//                 position: [-0.5, -0.5],
+//                 tex_coords: [0.0, 1.0],
+//             }, // bottom-left
+//             Vertex {
+//                 position: [0.5, -0.5],
+//                 tex_coords: [1.0, 1.0],
+//             }, // bottom-right
+//             Vertex {
+//                 position: [0.5, 0.5],
+//                 tex_coords: [1.0, 0.0],
+//             }, // top-right
+//         ];
+//         let indices: &[u16] = &[0, 1, 2, 0, 2, 3];
+//         self.num_indices = indices.len() as u32;
+// 
+//         self.vertex_buffer = Some(self.device().create_buffer_init(
+//             &wgpu::util::BufferInitDescriptor {
+//                 label: Some("Vertex Buffer"),
+//                 contents: bytemuck::cast_slice(&vertices),
+//                 usage: wgpu::BufferUsages::VERTEX,
+//             },
+//         ));
+// 
+//         self.index_buffer = Some(self.device().create_buffer_init(
+//             &wgpu::util::BufferInitDescriptor {
+//                 label: Some("Index Buffer"),
+//                 contents: bytemuck::cast_slice(indices),
+//                 usage: wgpu::BufferUsages::INDEX,
+//             },
+//         ));
+//     }
+// 
     fn init_pipeline(&mut self, size: winit::dpi::PhysicalSize<u32>) {
         let caps = self
             .surface
@@ -556,24 +562,23 @@ impl Renderer {
 
         self.bind_group_layout = Some(bind_group_layout);
         self.register_pipeline_keys();
-
     }
 
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
-        self.register_pipeline::<SpriteInstance>(
+        self.register_pipeline::<SpriteInstance, SpriteInstance>(
             PipelineKey::Sprite,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
-        self.register_pipeline::<TilemapInstance>(
+        self.register_pipeline::<TilemapInstance, TilemapInstance>(
             PipelineKey::Tilemap, PipelineConfig { 
                 shader_source: "shaders/tilemap.wgsl", 
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             });
-        self.register_pipeline::<SpriteInstance>(
+        self.register_pipeline::<SpriteInstance, SpriteInstance>(
             PipelineKey::SpriteAdditive,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
@@ -581,7 +586,7 @@ impl Renderer {
             },
         );
         // gui
-        self.register_pipeline::<GuiShapeInstance>(
+        self.register_pipeline::<GuiShapeInstance, SpriteInstance>(
             PipelineKey::GuiShape,
             PipelineConfig {
                 shader_source: include_str!("shaders/gui_shape.wgsl"),
@@ -640,7 +645,7 @@ impl Renderer {
         buffer
     }
 
-    fn create_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
+    fn create_default_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
         let camera_buf = match pipeline_key {
             PipelineKey::GuiShape => self.gui_camera_buffer.as_ref().unwrap(),
             PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
@@ -765,12 +770,14 @@ impl Renderer {
     }
 
     // Convenience accessors
+    #[inline]
     fn device(&self) -> &wgpu::Device {
         // if let Some(device) = self.device.as_ref() {
         //     return device;
         // }
         self.device.as_ref().unwrap()
     }
+    #[inline]
     pub fn queue(&self) -> &wgpu::Queue {
         self.queue.as_ref().unwrap()
     }

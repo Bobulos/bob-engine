@@ -1,14 +1,15 @@
 use wgpu::VertexBufferLayout;
 
-use crate::runtime::rendering::VertexLayout;
+use crate::runtime::rendering::InstanceLayout;
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct TilemapInstance {
-    
-}
-impl VertexLayout for TilemapInstance {
-    fn layout() -> wgpu::VertexBufferLayout<'static> {
+pub struct TilemapInstance {}
+impl InstanceLayout for TilemapInstance {
+    fn bind_group_layout() -> wgpu::BindGroupLayout {
+        
+    }
+    fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<TilemapInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
