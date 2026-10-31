@@ -1,4 +1,4 @@
-use wgpu::{BindGroup, wgc::{id::markers::BindGroupLayout}};
+use wgpu::{BindGroup, BindGroupLayout};
 
 use crate::runtime::rendering::{InstanceLayout, texture::Texture};
 
@@ -24,12 +24,12 @@ impl SpriteInstance {
     }
 }
 impl InstanceLayout for SpriteInstance {
-    fn bind_group(device: &wgpu::Device, cam_buffer: &wgpu::Buffer, texture: &Texture) -> BindGroup {
+    fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Bind Group Layout"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
-                    // 0 — texture
+                    // 0 texture
                     binding: 0,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Texture {
@@ -40,14 +40,14 @@ impl InstanceLayout for SpriteInstance {
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
-                    // 1 — sampler
+                    // 1 sampler
                     binding: 1,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
                 wgpu::BindGroupLayoutEntry {
-                    // 2 — camera uniform
+                    // 2 camera uniform
                     binding: 2,
                     visibility: wgpu::ShaderStages::VERTEX,
                     ty: wgpu::BindingType::Buffer {
@@ -59,9 +59,13 @@ impl InstanceLayout for SpriteInstance {
                 },
             ],
         });
+        
+        bind_group_layout
+    }
+    fn bind_group(device: &wgpu::Device, bind_group_layout: &BindGroupLayout, cam_buffer: &wgpu::Buffer, texture: &Texture) -> BindGroup {
         device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Batch Bind Group"),
-            layout: bind_group_layout.as_ref().unwrap(),
+            layout: bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,

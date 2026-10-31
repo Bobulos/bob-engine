@@ -1,14 +1,13 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering::tilemap_rendering::TilemapInstance;
 use crate::runtime::gui::components::GuiTextBox;
-use crate::runtime::rendering::{self, InstanceBindGroupLayout, InstanceLayout};
+use crate::runtime::rendering::{self, InstanceLayout};
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
 use crate::runtime::rendering::sprite_rendering::SpriteInstance;
 use crate::runtime::rendering::texture::Texture;
 use crate::runtime::rendering::vertex::Vertex;
-use crate::runtime::rendering::InstanceVertexLayout;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -151,12 +150,12 @@ impl Renderer {
             })
     }
     /// Register a built-in or custom pipeline at any time.
-    pub fn register_pipeline<B: InstanceBindGroupLayout, I: InstanceVertexLayout>(
+    pub fn register_pipeline<I: InstanceLayout>(
         &mut self,
         key: PipelineKey,
         config: PipelineConfig,
     ) {
-        let pipeline = self.build_pipeline(&config, B::layout(), I::layout());
+        let pipeline = self.build_pipeline(&config, I::bind_group_layout(self.device()), I::vertex_layout());
         self.pipelines.insert(key, pipeline);
     }
     // Public API
@@ -168,7 +167,7 @@ impl Renderer {
     pub fn init(&mut self, asset_store: Arc<OnceLock<AssetStore>>) {
         self.asset_store = Some(asset_store);
         self.camera.zoom = 1.0;
-        self.init_geometry();
+        //self.init_geometry();
         self.init_pipeline(self.size);
         self.init_camera();
     }
@@ -253,24 +252,28 @@ impl Renderer {
             .as_ref()
             .unwrap();
 
-        let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
+        let texture = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
             .expect("Failed to load batch texture");
 
         let raw: Vec<u8> = bytemuck::cast_slice(instances).to_vec();
         let stride = std::mem::size_of::<I>();
 
         let instance_buffer = self.create_instance_buffer_raw(&raw, instances.len());
-        let bind_group = self.create_default_bind_group(&tex, &pipeline_key);
-        
-        let bind_group = I::bind_group(self.device(), &self.camera_buffer.unwrap());
+        //let bind_group = self.create_default_bind_group(&tex, &pipeline_key);
+        let cam = self.camera_buffer.as_ref().unwrap();
+        let bind_group_layout = I::bind_group_layout(self.device());
+        let bind_group = I::bind_group(
+            self.device(), &bind_group_layout, &cam, &texture);
 
+        // ingest
         self.batches.push(Batch {
+            bind_group_layout,
             pipeline_key,
             bind_group,
             instance_buffer,
             instance_capacity: instances.len(),
             num_instances: instances.len() as u32,
-            _texture: tex,
+            _texture: texture,
             instances: raw,
             instance_stride: stride,
         });
@@ -375,15 +378,20 @@ impl Renderer {
     //     self.batches[idx] = batch;
     // }
     /// Replaces the texture on an existing batch (e.g. swapping a sprite sheet).
-    pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
-        let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
-            .expect("Failed to load batch texture");
-        let bind_group = self.create_default_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
+    /// 
 
-        let batch = &mut self.batches[batch_idx];
-        batch.bind_group = bind_group;
-        batch._texture = tex;
-    }
+    // TO re implement this I would need to use the type to get bind group safely.
+    // Instead pobably best to just destroy it
+    // 
+//     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
+//         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
+//             .expect("Failed to load batch texture");
+//         let bind_group = self.create_default_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
+// 
+//         let batch = &mut self.batches[batch_idx];
+//         batch.bind_group = bind_group;
+//         batch._texture = tex;
+//     }
 
     pub fn render(&mut self) -> Result<(), String> {
         self.update_camera();
@@ -514,7 +522,7 @@ impl Renderer {
         //         source: wgpu::ShaderSource::Wgsl(include_str!("shaders/sprite.wgsl").into()),
         //     });
 
-        let bind_group_layout =
+        let default_bind_group_layout =
             self.device()
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("Bind Group Layout"),
@@ -555,30 +563,31 @@ impl Renderer {
             self.device()
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Pipeline Layout"),
-                    bind_group_layouts: &[Some(&bind_group_layout)],
+                    bind_group_layouts: &[Some(&default_bind_group_layout)],
                     immediate_size: 0,
                 });
 
 
-        self.bind_group_layout = Some(bind_group_layout);
+        //self.bind_group_layout = Some(default_bind_group_layout);
         self.register_pipeline_keys();
     }
 
     fn register_pipeline_keys(&mut self) {
         // Register built-ins
-        self.register_pipeline::<SpriteInstance, SpriteInstance>(
+        self.register_pipeline::<SpriteInstance>(
             PipelineKey::Sprite,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
-        self.register_pipeline::<TilemapInstance, TilemapInstance>(
-            PipelineKey::Tilemap, PipelineConfig { 
-                shader_source: "shaders/tilemap.wgsl", 
-                blend: wgpu::BlendState::ALPHA_BLENDING,
-            });
-        self.register_pipeline::<SpriteInstance, SpriteInstance>(
+        // self.register_pipeline::<TilemapInstance>(
+        //     PipelineKey::Tilemap, 
+        //     PipelineConfig { 
+        //         shader_source: "shaders/tilemap.wgsl", 
+        //         blend: wgpu::BlendState::ALPHA_BLENDING,
+        //     });
+        self.register_pipeline::<SpriteInstance>(
             PipelineKey::SpriteAdditive,
             PipelineConfig {
                 shader_source: include_str!("shaders/sprite.wgsl"),
@@ -586,7 +595,7 @@ impl Renderer {
             },
         );
         // gui
-        self.register_pipeline::<GuiShapeInstance, SpriteInstance>(
+        self.register_pipeline::<GuiShapeInstance>(
             PipelineKey::GuiShape,
             PipelineConfig {
                 shader_source: include_str!("shaders/gui_shape.wgsl"),
@@ -645,32 +654,32 @@ impl Renderer {
         buffer
     }
 
-    fn create_default_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
-        let camera_buf = match pipeline_key {
-            PipelineKey::GuiShape => self.gui_camera_buffer.as_ref().unwrap(),
-            PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
-            _ => self.camera_buffer.as_ref().unwrap(),
-        };
-
-        self.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Batch Bind Group"),
-            layout: self.bind_group_layout.as_ref().unwrap(),
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&tex.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&tex.sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: camera_buf.as_entire_binding(),
-                },
-            ],
-        })
-    }
+//     fn create_default_bind_group(&self, tex: &Texture, pipeline_key: &PipelineKey) -> wgpu::BindGroup {
+//         let camera_buf = match pipeline_key {
+//             PipelineKey::GuiShape => self.gui_camera_buffer.as_ref().unwrap(),
+//             PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
+//             _ => self.camera_buffer.as_ref().unwrap(),
+//         };
+// 
+//         self.device().create_bind_group(&wgpu::BindGroupDescriptor {
+//             label: Some("Batch Bind Group"),
+//             layout: self.bind_group_layout.as_ref().unwrap(),
+//             entries: &[
+//                 wgpu::BindGroupEntry {
+//                     binding: 0,
+//                     resource: wgpu::BindingResource::TextureView(&tex.view),
+//                 },
+//                 wgpu::BindGroupEntry {
+//                     binding: 1,
+//                     resource: wgpu::BindingResource::Sampler(&tex.sampler),
+//                 },
+//                 wgpu::BindGroupEntry {
+//                     binding: 2,
+//                     resource: camera_buf.as_entire_binding(),
+//                 },
+//             ],
+//         })
+//     }
     // need to destroy this
     // Perframe helpers
     pub fn update_tilemap(
