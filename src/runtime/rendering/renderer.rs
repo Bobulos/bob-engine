@@ -167,7 +167,7 @@ impl Renderer {
     pub fn init(&mut self, asset_store: Arc<OnceLock<AssetStore>>) {
         self.asset_store = Some(asset_store);
         self.camera.zoom = 1.0;
-        //self.init_geometry();
+        self.init_geometry();
         self.init_pipeline(self.size);
         self.init_camera();
     }
@@ -448,45 +448,45 @@ impl Renderer {
         self.queue = Some(queue);
     }
 
-//     fn inir_geometry(&mut self) {
-//         let vertices = [
-//             Vertex {
-//                 position: [-0.5, 0.5],
-//                 tex_coords: [0.0, 0.0],
-//             }, // top-left
-//             Vertex {
-//                 position: [-0.5, -0.5],
-//                 tex_coords: [0.0, 1.0],
-//             }, // bottom-left
-//             Vertex {
-//                 position: [0.5, -0.5],
-//                 tex_coords: [1.0, 1.0],
-//             }, // bottom-right
-//             Vertex {
-//                 position: [0.5, 0.5],
-//                 tex_coords: [1.0, 0.0],
-//             }, // top-right
-//         ];
-//         let indices: &[u16] = &[0, 1, 2, 0, 2, 3];
-//         self.num_indices = indices.len() as u32;
-// 
-//         self.vertex_buffer = Some(self.device().create_buffer_init(
-//             &wgpu::util::BufferInitDescriptor {
-//                 label: Some("Vertex Buffer"),
-//                 contents: bytemuck::cast_slice(&vertices),
-//                 usage: wgpu::BufferUsages::VERTEX,
-//             },
-//         ));
-// 
-//         self.index_buffer = Some(self.device().create_buffer_init(
-//             &wgpu::util::BufferInitDescriptor {
-//                 label: Some("Index Buffer"),
-//                 contents: bytemuck::cast_slice(indices),
-//                 usage: wgpu::BufferUsages::INDEX,
-//             },
-//         ));
-//     }
-// 
+    fn init_geometry(&mut self) {
+        let vertices = [
+            Vertex {
+                position: [-0.5, 0.5],
+                tex_coords: [0.0, 0.0],
+            }, // top-left
+            Vertex {
+                position: [-0.5, -0.5],
+                tex_coords: [0.0, 1.0],
+            }, // bottom-left
+            Vertex {
+                position: [0.5, -0.5],
+                tex_coords: [1.0, 1.0],
+            }, // bottom-right
+            Vertex {
+                position: [0.5, 0.5],
+                tex_coords: [1.0, 0.0],
+            }, // top-right
+        ];
+        let indices: &[u16] = &[0, 1, 2, 0, 2, 3];
+        self.num_indices = indices.len() as u32;
+
+        self.vertex_buffer = Some(self.device().create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            },
+        ));
+
+        self.index_buffer = Some(self.device().create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(indices),
+                usage: wgpu::BufferUsages::INDEX,
+            },
+        ));
+    }
+
     fn init_pipeline(&mut self, size: winit::dpi::PhysicalSize<u32>) {
         let caps = self
             .surface
