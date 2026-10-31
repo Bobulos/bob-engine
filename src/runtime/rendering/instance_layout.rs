@@ -1,6 +1,8 @@
 use wgpu;
 
+use crate::runtime::rendering::texture::{self, Texture};
+
 pub trait InstanceLayout {
-    fn bind_group_layout(device: &wgpu::Device, cam_entry: &wgpu::BindGroupLayoutEntry) -> wgpu::BindGroupLayout;
+    fn bind_group(device: &wgpu::Device, cam_buffer: &wgpu::Buffer, texture: &Texture) -> wgpu::BindGroup;
     fn vertex_layout() -> wgpu::VertexBufferLayout<'static>;
 }

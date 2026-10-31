@@ -262,7 +262,7 @@ impl Renderer {
         let instance_buffer = self.create_instance_buffer_raw(&raw, instances.len());
         let bind_group = self.create_default_bind_group(&tex, &pipeline_key);
         
-        let bind_group = I::bind_group_layout();
+        let bind_group = I::bind_group(self.device(), &self.camera_buffer.unwrap());
 
         self.batches.push(Batch {
             pipeline_key,

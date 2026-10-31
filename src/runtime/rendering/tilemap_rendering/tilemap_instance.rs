@@ -6,7 +6,7 @@ use crate::runtime::rendering::InstanceLayout;
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TilemapInstance {}
 impl InstanceLayout for TilemapInstance {
-    fn bind_group_layout() -> wgpu::BindGroupLayout {
+    fn bind_group() -> wgpu::BindGroupLayout {
         
     }
     fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {

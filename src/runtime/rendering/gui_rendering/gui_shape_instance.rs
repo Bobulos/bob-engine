@@ -15,7 +15,7 @@ pub struct GuiShapeInstance {
 }
 
 impl InstanceLayout for GuiShapeInstance {
-    fn bind_group_layout() -> wgpu::BindGroupLayout {
+    fn bind_group() -> wgpu::BindGroupLayout {
         
     }
     fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {

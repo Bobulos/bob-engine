@@ -1,6 +1,6 @@
-use wgpu::{BindGroup, wgc::id::markers::BindGroupLayout};
+use wgpu::{BindGroup, wgc::{id::markers::BindGroupLayout}};
 
-use crate::runtime::rendering::InstanceLayout;
+use crate::runtime::rendering::{InstanceLayout, texture::Texture};
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -24,7 +24,7 @@ impl SpriteInstance {
     }
 }
 impl InstanceLayout for SpriteInstance {
-    fn bind_group_layout(device: &wgpu::Device, cam_entry: &wgpu::BindGroupLayoutEntry) -> BindGroup {
+    fn bind_group(device: &wgpu::Device, cam_buffer: &wgpu::Buffer, texture: &Texture) -> BindGroup {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Bind Group Layout"),
             entries: &[
@@ -59,8 +59,24 @@ impl InstanceLayout for SpriteInstance {
                 },
             ],
         });
-
-        
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Batch Bind Group"),
+            layout: bind_group_layout.as_ref().unwrap(),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: cam_buffer.as_entire_binding(),
+                },
+            ],
+        })
     }
     fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
