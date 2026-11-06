@@ -24,11 +24,11 @@ impl InstanceLayout for TilemapInstance {
                     resource: cam_buffer.as_entire_binding(),
                 },
             ],
-        }) 
+        })
     }
     fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("Bind Group Layout"),
+            label: Some("Tilemap Bind Group Layout"),
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     // 0 texture
@@ -59,47 +59,49 @@ impl InstanceLayout for TilemapInstance {
                     },
                     count: None,
                 },
+                wgpu::BindGroupLayoutEntry {
+                    // 3 tiles storage buffer
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    // 4 tile_uvs storage buffer
+                    binding: 4,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    // 5 map_info uniform buffer
+                    binding: 5,
+                    visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
             ],
         });
-        
+
         bind_group_layout
     }
     fn vertex_layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<TilemapInstance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &[
-                // i_pos: @location(2)
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 2,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                // i_size: @location(3)
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    shader_location: 3,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                // i_uv_offset: @location(4)
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
-                    shader_location: 4,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                // i_uv_scale: @location(5)
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 6]>() as wgpu::BufferAddress,
-                    shader_location: 5,
-                    format: wgpu::VertexFormat::Float32x2,
-                },
-                // rotation: @location(6)
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 8]>() as u64,
-                    shader_location: 6,
-                    format: wgpu::VertexFormat::Float32,
-                },
-            ],
+            attributes: &[],
         }
     }
 }

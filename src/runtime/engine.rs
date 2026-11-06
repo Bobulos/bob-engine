@@ -52,7 +52,7 @@ impl<'scr> Engine <'scr>{
 
     }
     // Init Region
-    
+
     /// Takes an asset store as an argument allows you to specify which assets to include
     pub fn init(&mut self, asset_store: &mut AssetStore, renderer: Renderer) {
         // let mut asset_store = AssetStore::new();
@@ -84,11 +84,7 @@ impl<'scr> Engine <'scr>{
     }
 
     fn init_renderer(&mut self) {
-        self.init_sprites();
         self.init_tilemap();
-    }
-    fn init_sprites(&mut self) {
-        let _world = self.entities.get_world(MAIN_WORLD).unwrap();
     }
     fn init_tilemap(&mut self) {
         let tilemap = [0u8; 64 * 64];
@@ -133,14 +129,14 @@ impl<'scr> Engine <'scr>{
         // initialize them jhons
         self.entities.start_system_groups();
     }
-    
+
     pub fn try_include_script(&mut self) {
         match self.scripting_engine {
             Some(ref engine) => {
-                
+
             }
             None => {
-                
+
             }
         }
     }
@@ -151,8 +147,8 @@ impl<'scr> Engine <'scr>{
     // pub fn include_script(&self, script: String) {
     // }
     // pub fn include_script_from_path_runtime(&self, path: String) {
-        
-    // }  
+
+    // }
     //
     pub fn run(&mut self) {
         self.frame_count += 1;
@@ -231,7 +227,7 @@ impl<'scr> Engine <'scr>{
         //println!("cam pos {},{}", world_camera_pos[0], world_camera_pos[1]);
         input.mouse_world_position = world_camera_pos.into();
     }
-    
+
     pub fn update(&mut self) {
         self.update_entities();
 
@@ -282,32 +278,39 @@ impl<'scr> Engine <'scr>{
             0,
         );
     }
-    fn init_test(&mut self) {
-        let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
-            "test_group",
-            SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
-        let group = self.entities.get_system_group_mut("test_group").unwrap();
-        group.register_system(
-            Box::new(crate::test::test_system::TestSystem::new(
-                Arc::clone(&self.asset_store),
-                Arc::clone(&self.input),
-            )),
-            0,
-        );
-    }
+    // fn init_test(&mut self) {
+    //     let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
+    //     self.entities.add_system_group(
+    //         "test_group",
+    //         SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
+    //     );
+    //     let group = self.entities.get_system_group_mut("test_group").unwrap();
+    //     group.register_system(
+    //         Box::new(crate::test::test_system::TestSystem::new(
+    //             Arc::clone(&self.asset_store),
+    //             Arc::clone(&self.input),
+    //         )),
+    //         0,
+    //     );
+    // }
     fn init_rendering(&mut self) {
         let fetched_world = self.entities.get_world(MAIN_WORLD).unwrap();
-        self.entities.add_system_group(
+        let group = self.entities.add_system_group(
             RENDER_GROUP,
             SystemGroup::new(fetched_world, SystemGroupThreading::Parallel),
-        );
+        ).unwrap();
         // Render system
-        let group = self.entities.get_system_group_mut(RENDER_GROUP).unwrap();
         let _ = group.register_system(
             Box::new(
                 rendering::gui_rendering::GuiShapeRenderSystem::new(
+                    Arc::clone(&self.renderer)
+                ),
+            ),
+            i32::MIN + 4,
+        );
+        let _ = group.register_system(
+            Box::new(
+                rendering::gui_rendering::GuiTextRenderSystem::new(
                     Arc::clone(&self.renderer)
                 ),
             ),
@@ -315,9 +318,7 @@ impl<'scr> Engine <'scr>{
         );
         let _ = group.register_system(
             Box::new(
-                rendering::gui_rendering::GuiTextRenderSystem::new(
-                    Arc::clone(&self.renderer)
-                ),
+                rendering::CameraSystem::new(Arc::clone(&self.renderer))
             ),
             i32::MIN + 2,
         );

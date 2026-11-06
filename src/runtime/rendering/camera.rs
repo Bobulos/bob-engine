@@ -1,4 +1,6 @@
-#[derive(Copy, Clone)]
+use crate::runtime::rendering::camera;
+
+#[derive(Copy, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Camera {
     pub position: [f32; 2], // world position the camera is looking at
     pub zoom: f32,          // 1.0 = normal, 2.0 = zoomed in
@@ -80,5 +82,10 @@ impl Camera {
             [0.0, 0.0, 1.0, 0.0],
             [-(r + l) / (r - l), -(t + b) / (t - b), 0.0, 1.0],
         ]
+    }
+}
+impl Default for Camera {
+    fn default() -> Self {
+        Camera::new(1080, 720)
     }
 }

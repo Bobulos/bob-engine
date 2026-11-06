@@ -47,8 +47,9 @@ impl Entities {
     //
     // SYSTEM GROUPS
     //
-    pub fn add_system_group(&mut self, name: &'static str, group: SystemGroup) {
+    pub fn add_system_group(&mut self, name: &'static str, group: SystemGroup) -> Result<&mut SystemGroup, String>{
         self.system_groups.insert(name, group);
+        self.get_system_group_mut(name)
     }
     pub fn get_system_group(&self, name: &'static str) -> Result<&SystemGroup, String> {
         let got = self.system_groups.get(name);

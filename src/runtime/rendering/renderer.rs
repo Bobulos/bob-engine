@@ -87,7 +87,7 @@ impl Renderer {
             vertex_buffer: None,
             index_buffer: None,
             num_indices: 0,
-            camera: Camera::new(1080, 720),
+            camera: Camera::default(),
             camera_buffer: None,
             asset_store: None,
             tilemaps: Vec::new(),
@@ -98,9 +98,9 @@ impl Renderer {
         }
     }
 
-    fn build_pipeline(&self, 
-        config: &PipelineConfig, 
-        instance_bgl: wgpu::BindGroupLayout, 
+    fn build_pipeline(&self,
+        config: &PipelineConfig,
+        instance_bgl: wgpu::BindGroupLayout,
         instance_vl: wgpu::VertexBufferLayout
     ) -> wgpu::RenderPipeline {
         let shader = self
@@ -378,16 +378,16 @@ impl Renderer {
     //     self.batches[idx] = batch;
     // }
     /// Replaces the texture on an existing batch (e.g. swapping a sprite sheet).
-    /// 
+    ///
 
     // TO re implement this I would need to use the type to get bind group safely.
     // Instead pobably best to just destroy it
-    // 
+    //
 //     pub fn set_batch_texture(&mut self, batch_idx: usize, tex_bytes: &[u8]) {
 //         let tex = Texture::from_bytes(self.device(), self.queue(), tex_bytes, "batch_texture")
 //             .expect("Failed to load batch texture");
 //         let bind_group = self.create_default_bind_group(&tex, &self.batches[batch_idx].pipeline_key);
-// 
+//
 //         let batch = &mut self.batches[batch_idx];
 //         batch.bind_group = bind_group;
 //         batch._texture = tex;
@@ -581,12 +581,13 @@ impl Renderer {
                 blend: wgpu::BlendState::ALPHA_BLENDING,
             },
         );
-        // self.register_pipeline::<TilemapInstance>(
-        //     PipelineKey::Tilemap, 
-        //     PipelineConfig { 
-        //         shader_source: "shaders/tilemap.wgsl", 
-        //         blend: wgpu::BlendState::ALPHA_BLENDING,
-        //     });
+        self.register_pipeline::<TilemapInstance>(
+            PipelineKey::Tilemap,
+            PipelineConfig {
+                shader_source: include_str!("shaders/tilemap.wgsl"),
+                blend: wgpu::BlendState::ALPHA_BLENDING,
+            },
+        );
         self.register_pipeline::<SpriteInstance>(
             PipelineKey::SpriteAdditive,
             PipelineConfig {
@@ -660,7 +661,7 @@ impl Renderer {
 //             PipelineKey::GuiText => self.gui_camera_buffer.as_ref().unwrap(),
 //             _ => self.camera_buffer.as_ref().unwrap(),
 //         };
-// 
+//
 //         self.device().create_bind_group(&wgpu::BindGroupDescriptor {
 //             label: Some("Batch Bind Group"),
 //             layout: self.bind_group_layout.as_ref().unwrap(),

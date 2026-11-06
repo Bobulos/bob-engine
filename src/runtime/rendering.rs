@@ -12,7 +12,11 @@ pub mod texture;
 pub mod tilemap_renderer;
 pub mod tilemap_rendering;
 pub mod vertex;
+pub mod camera_system;
+pub mod camera_proxy;
 
+pub use camera_proxy::CameraProxy;
+pub use camera_system::CameraSystem;
 pub use batch::Batch;
 pub use batch_handle::BatchHandle;
 pub use color::Color;
