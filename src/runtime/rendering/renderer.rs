@@ -1,7 +1,7 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
 use crate::runtime::rendering::tilemap_rendering::TilemapInstance;
 use crate::runtime::gui::components::GuiTextBox;
-use crate::runtime::rendering::{self, InstanceLayout};
+use crate::runtime::rendering::{self, InstanceLayout, batch};
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
@@ -733,7 +733,16 @@ impl Renderer {
                 &batch.instances,
             );
         }
+        self.purge_instances();
     }
+    /// Overwrite data after upload
+    fn purge_instances(&mut self) {
+        for batch in self.batches.iter_mut() {
+            for b in batch.instances.iter_mut() {
+                *b = u8::MAX;
+            }
+        }
+    } 
     fn record_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         let msaa_view = self.msaa_texture.as_ref().expect("MSAA texture not initialized");
 

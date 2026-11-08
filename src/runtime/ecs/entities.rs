@@ -16,6 +16,10 @@ impl Entities {
             system_groups: FxHashMap::default(),
         }
     }
+    pub fn register_template(&mut self, name: &'static str, entry: Arc<dyn Template>) {
+        let r = self.templates.insert(name, entry.clone());
+        assert!(r.is_none());
+    }
     pub fn start_system_groups(&mut self) {
         for system in self.system_groups.iter_mut() {
             system.1.start_systems();
