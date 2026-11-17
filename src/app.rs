@@ -116,7 +116,7 @@ impl<'e> ApplicationHandler for App<'e> {
 
                 // I might actually not need this possimbly being called excessively
                 // Asumes that run doesn't catch it probably doesnt really matter too much.
-                self.engine.renderer.write().unwrap().update_camera();
+                self.engine.renderer.write().unwrap().update_camera_buffer();
             }
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::RedrawRequested => {
