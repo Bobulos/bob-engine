@@ -50,9 +50,6 @@ impl<'scr> Engine <'scr>{
 
         engine
     }
-    pub fn init_ecs() {
-
-    }
     // Init Region
 
     /// Takes an asset store as an argument allows you to specify which assets to include
@@ -69,7 +66,9 @@ impl<'scr> Engine <'scr>{
             .init(self.asset_store.clone());
 
         self.init_renderer();
+        self.init_audio();
 
+        // Do this last it depends on the other systems
         self.init_systems();
 
         self.entities
@@ -78,13 +77,17 @@ impl<'scr> Engine <'scr>{
             .unwrap()
             .get_included_components();
     }
+    pub fn init_ecs() {
 
+    }
     fn init_world(&mut self) {
         self.entities
             .add_world(MAIN_WORLD, Arc::new(DynamicWorld::new()));
         crate::runtime::ecs::system_bootstrap::bootstrap(&self);
     }
-
+    fn init_audio(&mut self) {
+        self.audio.write().unwrap().init(self.asset_store.clone());
+    }
     fn init_renderer(&mut self) {
         self.init_tilemap();
     }

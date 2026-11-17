@@ -20,7 +20,7 @@ impl Entities {
         self.templates.insert(name, entry.clone());
     }
     pub fn get_template(&mut self, name: &'static str) -> Arc<dyn Template> {
-        self.templates.ge
+        self.templates.get(name).unwrap().clone()
     }
     pub fn start_system_groups(&mut self) {
         for system in self.system_groups.iter_mut() {
