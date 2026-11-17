@@ -1,4 +1,4 @@
-use crate::runtime::engine;
+use crate::runtime::audio::AudioOutput;
 use crate::runtime::input::{Input, KeyCode};
 use crate::runtime::assets::{AssetEmbedded, AssetStore};
 use crate::runtime::ecs::DynamicWorld;
@@ -14,6 +14,7 @@ pub struct Engine<'scr> {
     pub frame_count: u64,
     pub renderer: Arc<RwLock<Renderer>>,
     pub input: Arc<RwLock<Input>>,
+    pub audio: Arc<RwLock<AudioOutput>>,
     pub entities: Entities,
     // Assets
     pub asset_store: Arc<OnceLock<AssetStore>>,
@@ -41,6 +42,7 @@ impl<'scr> Engine <'scr>{
             input: Arc::new(RwLock::new(Input::new())),
             entities: Entities::new(),
             asset_store: Arc::new(OnceLock::new()),
+            audio: Arc::new(RwLock::new(AudioOutput::new())),
             scripting_engine: None,
         };
         // This is here to initialize the world so the user can add stuff too it
@@ -156,6 +158,7 @@ impl<'scr> Engine <'scr>{
         let target_frame_time = Duration::from_secs_f64(crate::constants::FIXED_DT as f64);
         let frame_start = Instant::now();
         self.update();
+        // render last after update
         self.render().expect("Renderer fatal error");
 
         let elapsed = Instant::now() - frame_start;
@@ -180,52 +183,49 @@ impl<'scr> Engine <'scr>{
     // This needs to go remove
     pub fn player_loop(&mut self) {
         let mut input = self.input.write().unwrap();
-        if input.get_key_down(KeyCode::KeyA) {
-            // world_serializer::create_scene_file_from_world(
-            //     String::from_str("Bingus").unwrap(),
-            //     &(self.entities.get_world(MAIN_WORLD).unwrap()),
-            // );
-            self.renderer
-                .write()
-                .unwrap()
-                .camera
-                .move_by(-Self::CAMERA_SPEED, 0.0);
-        }
-        if input.get_key_down(KeyCode::KeyD) {
-            self.renderer
-                .write()
-                .unwrap()
-                .camera
-                .move_by(Self::CAMERA_SPEED, 0.0);
-        }
-        if input.get_key_down(KeyCode::KeyW) {
-            self.renderer
-                .write()
-                .unwrap()
-                .camera
-                .move_by(0.0, Self::CAMERA_SPEED);
-        }
-        if input.get_key_down(KeyCode::KeyS) {
-            self.renderer
-                .write()
-                .unwrap()
-                .camera
-                .move_by(0.0, -Self::CAMERA_SPEED);
-        }
-        if input.get_key_down(KeyCode::Digit1) {
-            self.renderer.write().unwrap().camera.zoom_by(1.01);
-            self.renderer.write().unwrap().update_camera();
-        }
-        if input.get_key_down(KeyCode::Digit2) {
-            self.renderer.write().unwrap().camera.zoom_by(0.99);
-            self.renderer.write().unwrap().update_camera();
-        }
+        // if input.get_key_down(KeyCode::KeyA) {
+        //     // world_serializer::create_scene_file_from_world(
+        //     //     String::from_str("Bingus").unwrap(),
+        //     //     &(self.entities.get_world(MAIN_WORLD).unwrap()),
+        //     // );
+        //     self.renderer
+        //         .write()
+        //         .unwrap()
+        //         .camera
+        //         .move_by(-Self::CAMERA_SPEED, 0.0);
+        // }
+        // if input.get_key_down(KeyCode::KeyD) {
+        //     self.renderer
+        //         .write()
+        //         .unwrap()
+        //         .camera
+        //         .move_by(Self::CAMERA_SPEED, 0.0);
+        // }
+        // if input.get_key_down(KeyCode::KeyW) {
+        //     self.renderer
+        //         .write()
+        //         .unwrap()
+        //         .camera
+        //         .move_by(0.0, Self::CAMERA_SPEED);
+        // }
+        // if input.get_key_down(KeyCode::KeyS) {
+        //     self.renderer
+        //         .write()
+        //         .unwrap()
+        //         .camera
+        //         .move_by(0.0, -Self::CAMERA_SPEED);
+        // }
+        // if input.get_key_down(KeyCode::Digit1) {
+        //     self.renderer.write().unwrap().camera.zoom_by(1.01);
+        //     self.renderer.write().unwrap().update_camera_buffer();
+        // }
+        // if input.get_key_down(KeyCode::Digit2) {
+        //     self.renderer.write().unwrap().camera.zoom_by(0.99);
+        //     self.renderer.write().unwrap().update_camera_buffer();
+        // }
 
         let cam_cpy = self.renderer.read().unwrap().camera.to_owned();
-        let pos = input.mouse_position;
-        let world_camera_pos = cam_cpy.screen_to_world(pos.0, pos.1);
-        //println!("cam pos {},{}", world_camera_pos[0], world_camera_pos[1]);
-        input.mouse_world_position = world_camera_pos.into();
+        input.update_mouse_world_position(&cam_cpy);
     }
 
     pub fn update(&mut self) {

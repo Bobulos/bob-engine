@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use winit::{dpi::PhysicalPosition, event::{ElementState, KeyEvent, WindowEvent}, keyboard::PhysicalKey};
-use crate::runtime::{input::{KeyCode, mouse_button::MouseButton}, math::Float2};
+use crate::runtime::{input::{KeyCode, mouse_button::MouseButton}, math::Float2, rendering::camera::Camera};
 
 /// Mouse x y int px
 pub type MousePosition = (u32, u32);
@@ -39,6 +39,14 @@ impl Input {
             key_just_pressed: HashSet::new(),
             key_just_released: HashSet::new(),
         }
+    }
+    pub fn update_mouse_world_position(&mut self, camera: &Camera) -> Float2 {
+       
+        let m_pos = self.mouse_position;
+        let world_camera_pos = camera.screen_to_world(m_pos.0, m_pos.1);
+        //println!("cam pos {},{}", world_camera_pos[0], world_camera_pos[1]);
+        self.mouse_world_position = world_camera_pos.into();
+        world_camera_pos.into()
     }
     // pub fn mouse_position(&self) -> (u32, u32) {
     //     (self.mouse_position.0, self.mouse_position.1)

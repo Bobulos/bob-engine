@@ -8,6 +8,7 @@ pub mod rendering;
 pub mod scene;
 pub mod gui;
 pub mod scripting;
+pub mod audio;
 
 
 pub use engine::Engine;

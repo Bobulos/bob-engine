@@ -1,7 +1,7 @@
 use crate::runtime::assets::{AssetHandle, AssetStore};
+use crate::runtime::rendering::TilemapRenderer;
 use crate::runtime::rendering::tilemap_rendering::TilemapInstance;
-use crate::runtime::gui::components::GuiTextBox;
-use crate::runtime::rendering::{self, InstanceLayout, batch};
+use crate::runtime::rendering::InstanceLayout;
 use crate::runtime::rendering::camera::Camera;
 use crate::runtime::rendering::gui_rendering::GuiCharInstance;
 use crate::runtime::rendering::gui_rendering::gui_shape_instance::GuiShapeInstance;
@@ -60,7 +60,7 @@ pub struct Renderer {
     pub batches: Vec<Batch>,
 
     // tilemap
-    pub tilemaps: Vec<rendering::TilemapRenderer>,
+    pub tilemaps: Vec<TilemapRenderer>,
 
     // asset store
     asset_store: Option<Arc<OnceLock<AssetStore>>>,
@@ -187,12 +187,16 @@ impl Renderer {
 
         self.camera.viewport_width = width;
         self.camera.viewport_height = height;
-        self.update_camera();
+        self.update_camera_buffer();
 
         self.msaa_texture = Some(self.create_msaa_texture());
     }
 
-    pub fn update_camera(&self) {
+    pub fn write_camera_data(&mut self, camera: Camera) {
+        self.camera = camera;
+    }
+    ///Camera buffer is a shared resource
+    pub fn update_camera_buffer(&self) {
         let matrix = self.camera.build_matrix();
         self.queue().write_buffer(
             self.camera_buffer.as_ref().unwrap(),
@@ -212,7 +216,7 @@ impl Renderer {
         height: u32,
         tile_size: u32,
     ) -> usize {
-        let mut tilemap = rendering::TilemapRenderer::new(
+        let mut tilemap = TilemapRenderer::new(
             self.device(),
             self.config.as_ref().unwrap().format,
             self.camera_buffer.as_ref().unwrap(),
@@ -394,7 +398,7 @@ impl Renderer {
 //     }
 
     pub fn render(&mut self) -> Result<(), String> {
-        self.update_camera();
+        self.update_camera_buffer();
         self.upload_instances();
 
         let surface = self.surface.as_ref().unwrap();

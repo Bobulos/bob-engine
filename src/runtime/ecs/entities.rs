@@ -4,7 +4,7 @@ use crate::runtime::ecs::{DynamicWorld, SystemGroup, Template};
 
 /// This is a wrapper for the world and system groups held by the engine
 pub struct Entities {
-    pub templates: FxHashMap<&'static str, Arc<dyn Template>>,
+    templates: FxHashMap<&'static str, Arc<dyn Template>>,
     pub worlds: FxHashMap<&'static str, Arc<DynamicWorld>>,
     pub system_groups: FxHashMap<&'static str, SystemGroup>,
 }
@@ -16,9 +16,11 @@ impl Entities {
             system_groups: FxHashMap::default(),
         }
     }
-    pub fn register_template(&mut self, name: &'static str, entry: Arc<dyn Template>) {
-        let r = self.templates.insert(name, entry.clone());
-        assert!(r.is_none());
+    pub fn add_template(&mut self, name: &'static str, entry: Arc<dyn Template>) {
+        self.templates.insert(name, entry.clone());
+    }
+    pub fn get_template(&mut self, name: &'static str) -> Arc<dyn Template> {
+        self.templates.ge
     }
     pub fn start_system_groups(&mut self) {
         for system in self.system_groups.iter_mut() {
